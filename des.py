@@ -10,7 +10,7 @@
 """
 
 import struct
-from typing import Tuple, List
+from typing import Tuple, List, Generator
 
 INITIAL_PERMUTATION = (
     57, 49, 41, 33, 25, 17, 9,  1,
@@ -195,7 +195,7 @@ def f(block: int, key: int) -> int:
 def rotate_left(i28, k):
     return i28 << k & 0x0fffffff | i28 >> 28 - k
 
-def derive_keys(key):
+def derive_keys(key: bytes) -> Generator[int]:
     key, = struct.unpack(">Q", key)
     next_key = permute(key, 64, PERMUTED_CHOICE1)
     next_key = next_key >> 28, next_key & 0x0fffffff
@@ -304,7 +304,6 @@ def encode_block_rounds(block: int, derived_keys, encryption: bool, rounds: int 
     preoutput = join_block(right, left)
     return permute(preoutput, 64, INVERSE_PERMUTATION)
 
-
 def encrypt_block_one_round(block: int, key: bytes) -> int:
     """
     Convenience helper: encrypt a block using exactly one DES round.
@@ -315,3 +314,13 @@ def encrypt_block_one_round(block: int, key: bytes) -> int:
     """
     subkeys = list(derive_keys(key))
     return encode_block_rounds(block, subkeys, encryption=True, rounds=1)
+
+def one_round_des(block: int, key: bytes) -> int:
+    """
+    Encrypts a block using one round of DES.
+    This function does not apply the initial or final permutation.
+    """
+    subkey = next(derive_keys(key))
+    left, right = split_block(block)
+    left, right = feistel_round(left, right, subkey)
+    return join_block(right, left)
