@@ -1,7 +1,7 @@
 import des
 from typing import List, Tuple
-import csv
 import random
+from bisect import insort
 
 def get_ddt(box: int) -> List[List[int]]:
     ddt = [[0 for _ in range(16)] for _ in range(64)]
@@ -14,9 +14,32 @@ def get_ddt(box: int) -> List[List[int]]:
             ddt[x_diff][y_diff] += 1
     return ddt
 
-def get_maximal_diff(ddt: List[List[int]]) -> Tuple[int, int]:
-    x_diff, y_diff = max(((x, y) for x in range(1, 64) for y in range(16)), key=lambda pair: ddt[pair[0]][pair[1]])
-    return x_diff, y_diff
+def get_likely_diff(ddt: List[List[int]]) -> Tuple[int, int]:
+    ret = (-1, -1)
+    max_prob = -1
+    for x in range(1, 16):
+        for y in range(16):
+            if ddt[x << 1][y] > max_prob:
+                ret = (x << 1, y)
+                max_prob = ddt[x << 1][y]
+    return ret
+
+def get_best_characteristic(ddts: Tuple[List[List[int]]]) -> Tuple[int, int]:
+    # Find differentials in each sbox with high probabilities
+    print("Selecting likely XOR pairs for each s-box...")
+    canidates = []
+    for i in range(8):
+        canidates.append(get_likely_diff(ddts[i]))
+    print(f"Found {canidates}")
+    # Of canidates find highest one with greatest probability
+    idx = -1
+    max = -1
+    for i in range(8):
+        if ddts[i][canidates[i][0]][canidates[i][1]] > max:
+            idx = i
+            max = ddts[i][canidates[i][0]][canidates[i][1]]
+    print(f"Found best in sbox {idx} with probability {max}/64")
+    return canidates[idx][0] << (42 - idx * 6), canidates[idx][1] << (42 - idx * 6)
 
 def get_all_intermediate_pairs(in_diff: int, out_diff: int, box: int) -> List[Tuple[int, int]]:
     ret = []
@@ -46,16 +69,11 @@ def demo_one_round():
     print(f"1-round output : 0x{c1:016X}")
 
 if __name__ == "__main__":
-    s1_ddt = get_ddt(1)
-    '''
-    with open('sbox1_ddt.csv', 'w', newline='') as f:
-        writer = csv.writer(f)
-        writer.writerows(s1_ddt)
-    '''
-    in_diff, out_diff = get_maximal_diff(s1_ddt)
-    print(f"Most probable differential: in_diff={in_diff}, out_diff={out_diff}")
-    intermediate_pairs = get_all_intermediate_pairs(in_diff, out_diff, 1)
-    print(f"All possible intermediate pairs: {intermediate_pairs}")
+    # Generate the differential distribution table for each sbox
+    print("Generating differential distribution tables...")
+    ddts = tuple(get_ddt(i) for i in range(8))
+    in_diff, out_diff = get_best_characteristic(ddts)
+    print(f"in_diff={in_diff}, out_diff={out_diff}")
     '''
     for _ in range(100):
         L = random.randrange(0xffffffff)

@@ -182,10 +182,10 @@ def S(bits: int, box: int) -> int:
     Implements the 6-bit to 4-bit mapping of a Subsitition Box
 
     :param bits: A 6-bit input to the Sbox
-    :param box: The index of the Sbox used (1-indexed)
+    :param box: The index of the Sbox used (0-indexed)
     :ret: A 4-bit output from the Sbox
     """
-    return SUBSTITUTION[box - 1][bits & 0x20 | (bits & 0x01) << 4 | (bits & 0x1e) >> 1]
+    return SUBSTITUTION[box][bits & 0x20 | (bits & 0x01) << 4 | (bits & 0x1e) >> 1]
 
 def subkeys(key: bytes) -> Generator[int]:
     key, = struct.unpack(">Q", key)

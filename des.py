@@ -40,7 +40,7 @@ def f(block: int, key: int) -> int:
     """
     block = E(block) ^ key
     ret = 0
-    for i in range(0, 8):
+    for i in range(8):
         ret = ret << 4 | S(get_i6(block, i), i)
     return P(ret)
 
