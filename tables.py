@@ -1,4 +1,5 @@
-from typing import Tuple
+import struct
+from typing import Tuple, Generator
 
 INITIAL = (
     57, 49, 41, 33, 25, 17, 9,  1,
@@ -105,6 +106,32 @@ SUBSTITUTION = (
     ),
 )
 
+CHOICE1 = (
+    56, 48, 40, 32, 24, 16, 8,
+    0,  57, 49, 41, 33, 25, 17,
+    9,  1,  58, 50, 42, 34, 26,
+    18, 10, 2,  59, 51, 43, 35,
+    62, 54, 46, 38, 30, 22, 14,
+    6,  61, 53, 45, 37, 29, 21,
+    13, 5,  60, 52, 44, 36, 28,
+    20, 12, 4,  27, 19, 11, 3,
+)
+
+CHOICE2 = (
+    13, 16, 10, 23, 0,  4,
+    2,  27, 14, 5,  20, 9,
+    22, 18, 11, 3,  25, 7,
+    15, 6,  26, 19, 12, 1,
+    40, 51, 30, 36, 46, 54,
+    29, 39, 50, 44, 32, 47,
+    43, 48, 38, 55, 33, 52,
+    45, 41, 49, 35, 28, 31,
+)
+
+ROTATES = (
+    1, 1, 2, 2, 2, 2, 2, 2, 1, 2, 2, 2, 2, 2, 2, 1,
+)
+
 def permute(data: int, bits: int, table: Tuple[int]) -> int:
     """
     Performs a permutation on data with a given table
@@ -119,6 +146,9 @@ def permute(data: int, bits: int, table: Tuple[int]) -> int:
         if data & 1 << bits - 1 - v:
             ret |= 1 << len(table) - 1 - i
     return ret
+
+def rotate(i28, k):
+    return i28 << k & 0x0fffffff | i28 >> 28 - k
 
 def IP(block: int, invert: bool = False) -> int:
     if invert:
@@ -156,3 +186,11 @@ def S(bits: int, box: int) -> int:
     :ret: A 4-bit output from the Sbox
     """
     return SUBSTITUTION[box - 1][bits & 0x20 | (bits & 0x01) << 4 | (bits & 0x1e) >> 1]
+
+def subkeys(key: bytes) -> Generator[int]:
+    key, = struct.unpack(">Q", key)
+    next_key = permute(key, 64, CHOICE1)
+    next_key = next_key >> 28, next_key & 0x0fffffff
+    for bits in ROTATES:
+        next_key = rotate(next_key[0], bits), rotate(next_key[1], bits)
+        yield permute(next_key[0] << 28 | next_key[1], 56, CHOICE2)
