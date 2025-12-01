@@ -123,4 +123,9 @@ if __name__ == "__main__":
     ct_pairs = get_good_pairs(ct_pairs, diffs[0][1], 0)
     
     print(votes)
-    print(max(votes, key=votes.get))
+
+    #print(max(votes, key=votes.get))
+    max_value = max(votes.values())
+    most_likely_keys = [key for key in votes if votes[key] == max_value]
+
+    print(f"possible subkey fragments: {most_likely_keys}")
