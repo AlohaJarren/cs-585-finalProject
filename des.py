@@ -22,6 +22,16 @@ def get_i6(block: int, i: int) -> int:
     """
     return (block >> (42 - i * 6)) & 0x3f
 
+def get_i4(block: int, i: int) -> int:
+    """
+    Extract the i'th 6-bit chunk from a 48-bit block
+
+    :param block: A 48-bit block of data
+    :param i: The index of 6-bit chunk from MSB to LSB
+    :ret: A 6-bit chunk from block
+    """
+    return (block >> (28 - i * 4)) & 0x0f
+
 def split_block(block: int) -> Tuple[int, int]:
     """
     Split a 64-bit block into a pair of 32-bit halves (left, right).

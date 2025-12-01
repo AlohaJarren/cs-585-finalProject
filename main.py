@@ -91,6 +91,34 @@ def demo_one_round():
     print(f"Plaintext      : 0x{plaintext:016X}")
     print(f"1-round output : 0x{c1:016X}")
 
+def get_good_pairs(ct_pairs: List[Tuple[int, int]], out_diff: int, box: int) -> List[Tuple[int, int]]:
+    ret = []
+    for ct1, ct2 in ct_pairs:
+        # 1. Split the ciphertexts into Left and Right halves (32-bits each)
+        l1, r1 = des.split_block(ct1)
+        l2, r2 = des.split_block(ct2)
+        
+        # 2. Calculate the difference in the Right Half
+        # In a 1-round Feistel, R1 = L0 ^ F(R0, K).
+        # Since we assume Delta L0 is 0, the difference in R1 is EXACTLY the F-function output diff.
+        f_diff = r1 ^ r2
+        
+        # 3. Undo the P-Permutation 
+        # The S-box outputs go through P before hitting the XOR. We must reverse this.
+        sbox_outputs_diff = des.P(f_diff, invert=True)
+        
+        # 4. Extract the 4-bit difference for our specific S-box
+        # We assume standard Big-Endian bit packing (Box 0 is MSB, Box 7 is LSB)
+        # Shift amount: (7 - box) * 4 for Little Endian index, or (28 - box * 4) for Big Endian.
+        # Standard DES usually treats Box 1 (idx 0) as the most significant nibble.
+        shift = 28 - (box * 4)
+        observed_nibble = (sbox_outputs_diff >> shift) & 0xF
+        
+        # 5. The Filter: Does the observed physics match our prediction?
+        if observed_nibble == out_diff:
+            ret.append((ct1, ct2))
+    return ret
+
 if __name__ == "__main__":
     # Generate the differential distribution table for each sbox
     print("Generating differential distribution tables...")
@@ -107,6 +135,7 @@ if __name__ == "__main__":
         ct1 = des.encode_block_rounds(pt1, subkeys, encryption=True, rounds=1)
         ct2 = des.encode_block_rounds(pt2, subkeys, encryption=True, rounds=1)
         ct_pairs.append((ct1, ct2))
+    ct_pairs = get_good_pairs(ct_pairs, out_diff, box)
     votes = dict.fromkeys(range(2 ** 6), 0)
     for ct1, ct2 in ct_pairs:
         l1, r1 = des.split_block(ct1)
