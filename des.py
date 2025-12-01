@@ -89,8 +89,9 @@ def encode_block_rounds(block: int, derived_keys, encryption: bool, rounds: int 
     rounds = max(1, min(rounds, len(keys_list)))
 
     # Standard DES initial permutation.
-    permuted = IP(block)
-    left, right = split_block(permuted)
+    #permuted = IP(block)
+    #left, right = split_block(permuted)
+    left, right = split_block(block)
 
     if encryption:
         key_iter = keys_list[:rounds]
@@ -102,8 +103,9 @@ def encode_block_rounds(block: int, derived_keys, encryption: bool, rounds: int 
         left, right = feistel_round(left, right, subkey)
 
     # In DES the halves are swapped before the final permutation.
-    preoutput = join_block(right, left)
-    return IP(preoutput, invert=True)
+    #preoutput = join_block(right, left)
+    #return IP(preoutput, invert=True)
+    return join_block(left, right)
 
 def encrypt_block_one_round(block: int, key: bytes) -> int:
     """
@@ -115,13 +117,3 @@ def encrypt_block_one_round(block: int, key: bytes) -> int:
     """
     subkeys = list(subkeys(key))
     return encode_block_rounds(block, subkeys, encryption=True, rounds=1)
-
-def one_round_des(block: int, key: bytes) -> int:
-    """
-    Encrypts a block using one round of DES.
-    This function does not apply the initial or final permutation.
-    """
-    subkey = next(subkeys(key))
-    left, right = split_block(block)
-    left, right = feistel_round(left, right, subkey)
-    return join_block(right, left)

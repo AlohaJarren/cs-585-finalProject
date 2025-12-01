@@ -1,7 +1,6 @@
 import des
 from typing import List, Tuple
 import random
-from bisect import insort
 
 def get_ddt(box: int) -> List[List[int]]:
     ddt = [[0 for _ in range(16)] for _ in range(64)]
@@ -30,7 +29,7 @@ def get_best_characteristic(ddts: Tuple[List[List[int]]]) -> Tuple[int, int, int
     canidates = []
     for i in range(8):
         canidates.append(get_likely_diff(ddts[i]))
-    print(f"Found {canidates}")
+    print(f"Found canidates: {canidates}")
     # Of canidates find highest one with greatest probability
     print("Selecting best XOR pair from canidates...")
     idx = -1
@@ -41,6 +40,29 @@ def get_best_characteristic(ddts: Tuple[List[List[int]]]) -> Tuple[int, int, int
             max = ddts[i][canidates[i][0]][canidates[i][1]]
     print(f"Found best in sbox {idx} with probability {max}/64")
     return idx, canidates[idx][0], canidates[idx][1]
+
+def generate_plaintext_pairs(in_diff: int, n: int) -> List[Tuple[int, int]]:
+    print(bin(in_diff))
+    ret = []
+    for _ in range(n):
+        pt = int.from_bytes(random.randbytes(8))
+        ret.append((pt, pt ^ in_diff))
+    return ret
+
+def get_probable_key(out_diff: int, in1: int, in2: int, box:int) -> int:
+    """
+    Recover a single 6-bit subkey candidate for one S-box in 1-round DES.
+    """
+    candidates = []
+
+    for k in range(64):
+        y1 = des.S(in1 ^ k, box)
+        y2 = des.S(in2 ^ k, box)
+        if (y1 ^ y2) == out_diff:
+            candidates.append(k)
+    
+    # We only care about returning a single key.
+    return candidates
 
 def get_all_intermediate_pairs(in_diff: int, out_diff: int, box: int) -> List[Tuple[int, int]]:
     ret = []
@@ -74,13 +96,23 @@ if __name__ == "__main__":
     print("Generating differential distribution tables...")
     ddts = tuple(get_ddt(i) for i in range(8))
     box, in_diff, out_diff = get_best_characteristic(ddts)
-    print("")
-    '''
-    for _ in range(100):
-        L = random.randrange(0xffffffff)
-        R1 = random.randrange(0xffffffff)
-        R2 = R1 ^ 0x60000000
-        Y1 = des.one_round_des(des.join_block(L, R1))
-        Y2 = des.one_round_des(des.join_block(L, R2))
-        output_diff = Y1 ^ Y2
-    '''
+    # Generate plaintext pairs for attack
+    pt_pairs = generate_plaintext_pairs(des.E(in_diff << 42 - box * 6, invert=True), 10000)
+    # Generate random subkeys
+    subkeys = list(des.subkeys((random.randbytes(8))))
+    print(f"subkey: {subkeys[0]}")
+    print(f"subkey fragment: {des.get_i6(subkeys[0], box)}")
+    ct_pairs = []
+    for pt1, pt2 in pt_pairs:
+        ct1 = des.encode_block_rounds(pt1, subkeys, encryption=True, rounds=1)
+        ct2 = des.encode_block_rounds(pt2, subkeys, encryption=True, rounds=1)
+        ct_pairs.append((ct1, ct2))
+    votes = dict.fromkeys(range(2 ** 6), 0)
+    for ct1, ct2 in ct_pairs:
+        l1, r1 = des.split_block(ct1)
+        l2, r2 = des.split_block(ct2)
+        probable_key_bits = get_probable_key(out_diff, des.get_i6(des.E(l1), box), des.get_i6(des.E(l2), box), box)
+        for key_bits in probable_key_bits:
+            votes[key_bits] += 1
+    print(votes)
+    print(max(votes, key=votes.get))
