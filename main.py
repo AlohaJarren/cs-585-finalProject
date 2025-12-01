@@ -31,6 +31,7 @@ def get_best_characteristic(ddts: Tuple[List[List[int]]]) -> Tuple[int, int, int
         canidates.append(get_likely_diff(ddts[i]))
     print(f"Found canidates: {canidates}")
     # Of canidates find highest one with greatest probability
+    '''
     print("Selecting best XOR pair from canidates...")
     idx = -1
     max = -1
@@ -39,19 +40,19 @@ def get_best_characteristic(ddts: Tuple[List[List[int]]]) -> Tuple[int, int, int
             idx = i
             max = ddts[i][canidates[i][0]][canidates[i][1]]
     print(f"Found best in sbox {idx} with probability {max}/64")
-    return idx, canidates[idx][0], canidates[idx][1]
+    '''
+    return canidates
 
 def generate_plaintext_pairs(in_diff: int, n: int) -> List[Tuple[int, int]]:
-    print(bin(in_diff))
     ret = []
     for _ in range(n):
         pt = int.from_bytes(random.randbytes(8))
         ret.append((pt, pt ^ in_diff))
     return ret
 
-def get_probable_key(out_diff: int, in1: int, in2: int, box:int) -> int:
+def get_probable_key(out_diff: int, in1: int, in2: int, box:int) -> List[int]:
     """
-    Recover a single 6-bit subkey candidate for one S-box in 1-round DES.
+    Recover a 6-bit partial subkey candidate for one S-box characteristic.
     """
     candidates = []
 
@@ -61,16 +62,7 @@ def get_probable_key(out_diff: int, in1: int, in2: int, box:int) -> int:
         if (y1 ^ y2) == out_diff:
             candidates.append(k)
     
-    # We only care about returning a single key.
     return candidates
-
-def get_all_intermediate_pairs(in_diff: int, out_diff: int, box: int) -> List[Tuple[int, int]]:
-    ret = []
-    for x1 in range(64):
-        x2 = x1 ^ in_diff
-        if des.S(x1, box) ^ des.S(x2, box) == out_diff:
-            ret.append((x1, x2))
-    return ret
 
 def matrix_pretty_print(matrix):
     # see https://stackoverflow.com/questions/13214809/pretty-print-2d-python-list
@@ -91,57 +83,44 @@ def demo_one_round():
     print(f"Plaintext      : 0x{plaintext:016X}")
     print(f"1-round output : 0x{c1:016X}")
 
-def get_good_pairs(ct_pairs: List[Tuple[int, int]], out_diff: int, box: int) -> List[Tuple[int, int]]:
+def get_good_pairs(ct_pairs: List[Tuple[int, int]], expected_diff: int, box: int) -> List[Tuple[int, int]]:
     ret = []
     for ct1, ct2 in ct_pairs:
-        # 1. Split the ciphertexts into Left and Right halves (32-bits each)
-        l1, r1 = des.split_block(ct1)
-        l2, r2 = des.split_block(ct2)
-        
-        # 2. Calculate the difference in the Right Half
-        # In a 1-round Feistel, R1 = L0 ^ F(R0, K).
-        # Since we assume Delta L0 is 0, the difference in R1 is EXACTLY the F-function output diff.
+        _, r1 = des.split_block(ct1)
+        _, r2 = des.split_block(ct2)
         f_diff = r1 ^ r2
-        
-        # 3. Undo the P-Permutation 
-        # The S-box outputs go through P before hitting the XOR. We must reverse this.
-        sbox_outputs_diff = des.P(f_diff, invert=True)
-        
-        # 4. Extract the 4-bit difference for our specific S-box
-        # We assume standard Big-Endian bit packing (Box 0 is MSB, Box 7 is LSB)
-        # Shift amount: (7 - box) * 4 for Little Endian index, or (28 - box * 4) for Big Endian.
-        # Standard DES usually treats Box 1 (idx 0) as the most significant nibble.
-        shift = 28 - (box * 4)
-        observed_nibble = (sbox_outputs_diff >> shift) & 0xF
-        
-        # 5. The Filter: Does the observed physics match our prediction?
-        if observed_nibble == out_diff:
+        s_diff = des.P(f_diff, invert=True)
+        if (s_diff >> (28 - (box * 4))) & 0xF == expected_diff:
             ret.append((ct1, ct2))
     return ret
+
+def recover_partial_subkey(ct_pairs: List[Tuple[int, int]], expected_diff: int, box: int) -> List[int]:
+    votes = dict.fromkeys(range(2 ** 6), 0)
+    for ct1, ct2 in ct_pairs:
+        l1, _ = des.split_block(ct1)
+        l2, _ = des.split_block(ct2)
+        possible_keys = get_probable_key(expected_diff, des.get_i6(des.E(l1), box), des.get_i6(des.E(l2), box), box)
+        for key_bits in possible_keys:
+            votes[key_bits] += 1
+    return 
 
 if __name__ == "__main__":
     # Generate the differential distribution table for each sbox
     print("Generating differential distribution tables...")
     ddts = tuple(get_ddt(i) for i in range(8))
-    box, in_diff, out_diff = get_best_characteristic(ddts)
-    # Generate plaintext pairs for attack
-    pt_pairs = generate_plaintext_pairs(des.E(in_diff << 42 - box * 6, invert=True), 10000)
-    # Generate random subkeys
+    diffs = get_best_characteristic(ddts)
+    # Choose a random key and generate subkeys
     subkeys = list(des.subkeys((random.randbytes(8))))
-    print(f"subkey: {subkeys[0]}")
-    print(f"subkey fragment: {des.get_i6(subkeys[0], box)}")
+    print(f"1 round subkey: {subkeys[0]}")
+
+    # Generate plaintext pairs for attack
+    pt_pairs = generate_plaintext_pairs(des.E(diffs[0][0] << 42, invert=True), 1000)
     ct_pairs = []
     for pt1, pt2 in pt_pairs:
         ct1 = des.encode_block_rounds(pt1, subkeys, encryption=True, rounds=1)
         ct2 = des.encode_block_rounds(pt2, subkeys, encryption=True, rounds=1)
         ct_pairs.append((ct1, ct2))
-    ct_pairs = get_good_pairs(ct_pairs, out_diff, box)
-    votes = dict.fromkeys(range(2 ** 6), 0)
-    for ct1, ct2 in ct_pairs:
-        l1, r1 = des.split_block(ct1)
-        l2, r2 = des.split_block(ct2)
-        probable_key_bits = get_probable_key(out_diff, des.get_i6(des.E(l1), box), des.get_i6(des.E(l2), box), box)
-        for key_bits in probable_key_bits:
-            votes[key_bits] += 1
+    ct_pairs = get_good_pairs(ct_pairs, diffs[0][1], 0)
+    
     print(votes)
     print(max(votes, key=votes.get))
