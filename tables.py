@@ -187,7 +187,8 @@ def S(bits: int, box: int) -> int:
     """
     return SUBSTITUTION[box][bits & 0x20 | (bits & 0x01) << 4 | (bits & 0x1e) >> 1]
 
-def subkeys(key: bytes) -> Generator[int]:
+#added the Nones to this line to fix exception error
+def subkeys(key: bytes) -> Generator[int, None, None]:
     key, = struct.unpack(">Q", key)
     next_key = permute(key, 64, CHOICE1)
     next_key = next_key >> 28, next_key & 0x0fffffff
