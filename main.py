@@ -24,14 +24,15 @@ def get_likely_diff(ddt: List[List[int]]) -> Tuple[int, int]:
                 max_prob = ddt[x << 1][y]
     return ret
 
-def get_best_characteristic(ddts: Tuple[List[List[int]]]) -> Tuple[int, int]:
+def get_best_characteristic(ddts: Tuple[List[List[int]]]) -> Tuple[int, int, int]:
     # Find differentials in each sbox with high probabilities
-    print("Selecting likely XOR pairs for each s-box...")
+    print("Finding most likely XOR pair in each s-box...")
     canidates = []
     for i in range(8):
         canidates.append(get_likely_diff(ddts[i]))
     print(f"Found {canidates}")
     # Of canidates find highest one with greatest probability
+    print("Selecting best XOR pair from canidates...")
     idx = -1
     max = -1
     for i in range(8):
@@ -39,7 +40,7 @@ def get_best_characteristic(ddts: Tuple[List[List[int]]]) -> Tuple[int, int]:
             idx = i
             max = ddts[i][canidates[i][0]][canidates[i][1]]
     print(f"Found best in sbox {idx} with probability {max}/64")
-    return canidates[idx][0] << (42 - idx * 6), canidates[idx][1] << (42 - idx * 6)
+    return idx, canidates[idx][0], canidates[idx][1]
 
 def get_all_intermediate_pairs(in_diff: int, out_diff: int, box: int) -> List[Tuple[int, int]]:
     ret = []
@@ -72,8 +73,8 @@ if __name__ == "__main__":
     # Generate the differential distribution table for each sbox
     print("Generating differential distribution tables...")
     ddts = tuple(get_ddt(i) for i in range(8))
-    in_diff, out_diff = get_best_characteristic(ddts)
-    print(f"in_diff={in_diff}, out_diff={out_diff}")
+    box, in_diff, out_diff = get_best_characteristic(ddts)
+    print("")
     '''
     for _ in range(100):
         L = random.randrange(0xffffffff)
