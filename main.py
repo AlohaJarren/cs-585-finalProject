@@ -42,6 +42,24 @@ def get_best_characteristic(ddts: Tuple[List[List[int]]]) -> Tuple[int, int, int
     print(f"Found best in sbox {idx} with probability {max}/64")
     return idx, canidates[idx][0], canidates[idx][1]
 
+def get_probable_key(out_diff: int, in1: int, in2: int, box:int) -> int:
+    """
+    Recover a single 6-bit subkey candidate for one S-box in 1-round DES.
+    """
+    candidates = []
+
+    for k in range(64):
+        y1 = des.S(in1 ^ k, box)
+        y2 = des.S(in2 ^ k, box)
+        if (y1 ^ y2) == out_diff:
+            candidates.append(k)
+    
+    if not candidates:
+        raise ValueError("No subkey candidate found for given inputs/difference")
+    
+    # We only care about returning a single key.
+    return candidates[-1]
+
 def get_all_intermediate_pairs(in_diff: int, out_diff: int, box: int) -> List[Tuple[int, int]]:
     ret = []
     for x1 in range(64):
