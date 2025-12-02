@@ -23,13 +23,12 @@ def get_likely_diff(ddt: List[List[int]]) -> Tuple[int, int]:
                 max_prob = ddt[x << 1][y]
     return ret
 
-def get_best_characteristic(ddts: Tuple[List[List[int]]]) -> Tuple[int, int, int]:
+def get_best_characteristics(ddts: Tuple[List[List[int]]]) -> Tuple[int, int, int]:
     # Find differentials in each sbox with high probabilities
     print("Finding most likely XOR pair in each s-box...")
-    canidates = []
+    diffs = []
     for i in range(8):
-        canidates.append(get_likely_diff(ddts[i]))
-    print(f"Found canidates: {canidates}")
+        diffs.append(get_likely_diff(ddts[i]))
     # Of canidates find highest one with greatest probability
     '''
     print("Selecting best XOR pair from canidates...")
@@ -41,12 +40,12 @@ def get_best_characteristic(ddts: Tuple[List[List[int]]]) -> Tuple[int, int, int
             max = ddts[i][canidates[i][0]][canidates[i][1]]
     print(f"Found best in sbox {idx} with probability {max}/64")
     '''
-    return canidates
+    return diffs
 
 def generate_plaintext_pairs(in_diff: int, n: int) -> List[Tuple[int, int]]:
     ret = []
     for _ in range(n):
-        pt = int.from_bytes(random.randbytes(8))
+        pt = random.randrange(2 ** 64)
         ret.append((pt, pt ^ in_diff))
     return ret
 
@@ -94,7 +93,7 @@ def get_good_pairs(ct_pairs: List[Tuple[int, int]], expected_diff: int, box: int
             ret.append((ct1, ct2))
     return ret
 
-def recover_partial_subkey(ct_pairs: List[Tuple[int, int]], expected_diff: int, box: int) -> List[int]:
+def partial_subkey_canidates(ct_pairs: List[Tuple[int, int]], expected_diff: int, box: int) -> List[int]:
     votes = dict.fromkeys(range(2 ** 6), 0)
     for ct1, ct2 in ct_pairs:
         l1, _ = des.split_block(ct1)
@@ -102,30 +101,28 @@ def recover_partial_subkey(ct_pairs: List[Tuple[int, int]], expected_diff: int, 
         possible_keys = get_probable_key(expected_diff, des.get_i6(des.E(l1), box), des.get_i6(des.E(l2), box), box)
         for key_bits in possible_keys:
             votes[key_bits] += 1
-    return 
+    return [key for key in votes if votes[key] == max(votes.values())]
 
 if __name__ == "__main__":
     # Generate the differential distribution table for each sbox
     print("Generating differential distribution tables...")
     ddts = tuple(get_ddt(i) for i in range(8))
-    diffs = get_best_characteristic(ddts)
+    diffs = get_best_characteristics(ddts)
+    print(f"characteristics: {diffs}")
     # Choose a random key and generate subkeys
     subkeys = list(des.subkeys((random.randbytes(8))))
     print(f"1 round subkey: {subkeys[0]}")
-
+    print(f"subkey fragments: {[des.get_i6(subkeys[0], i) for i in range(8)]}")
     # Generate plaintext pairs for attack
-    pt_pairs = generate_plaintext_pairs(des.E(diffs[0][0] << 42, invert=True), 1000)
-    ct_pairs = []
-    for pt1, pt2 in pt_pairs:
-        ct1 = des.encode_block_rounds(pt1, subkeys, encryption=True, rounds=1)
-        ct2 = des.encode_block_rounds(pt2, subkeys, encryption=True, rounds=1)
-        ct_pairs.append((ct1, ct2))
-    ct_pairs = get_good_pairs(ct_pairs, diffs[0][1], 0)
-    
-    print(votes)
-
-    #print(max(votes, key=votes.get))
-    max_value = max(votes.values())
-    most_likely_keys = [key for key in votes if votes[key] == max_value]
-
-    print(f"possible subkey fragments: {most_likely_keys}")
+    subkey = 0
+    for i in range(8):
+        pt_pairs = generate_plaintext_pairs(des.E(diffs[i][0] << 42 - i * 6, invert=True), 1000)
+        ct_pairs = []
+        for pt1, pt2 in pt_pairs:
+            ct1 = des.encode_block_rounds(pt1, subkeys, encryption=True, rounds=1)
+            ct2 = des.encode_block_rounds(pt2, subkeys, encryption=True, rounds=1)
+            ct_pairs.append((ct1, ct2))
+        ct_pairs = get_good_pairs(ct_pairs, diffs[i][1], i)
+        print(f"for subkey pos {i} with characteristic {diffs[i]} filtered to {len(ct_pairs)} good ct pairs")
+        canidates = partial_subkey_canidates(ct_pairs, diffs[i][1], i)
+        print(f"Canidate partial subkeys for position {i}: {canidates}")
