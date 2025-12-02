@@ -1,6 +1,8 @@
 import des
 from typing import List, Tuple
 import random
+from math import prod
+import argparse
 
 def get_ddt(box: int) -> List[List[int]]:
     ddt = [[0 for _ in range(16)] for _ in range(64)]
@@ -13,34 +15,15 @@ def get_ddt(box: int) -> List[List[int]]:
             ddt[x_diff][y_diff] += 1
     return ddt
 
-def get_likely_diff(ddt: List[List[int]]) -> Tuple[int, int]:
+def get_best_characteristic(ddt: List[List[int]]) -> Tuple[int, int]:
     ret = (-1, -1)
     max_prob = -1
-    for x in range(1, 16):
+    for x in range(1, 4):
         for y in range(16):
-            if ddt[x << 1][y] > max_prob:
-                ret = (x << 1, y)
-                max_prob = ddt[x << 1][y]
+            if ddt[x << 2][y] > max_prob:
+                ret = (x << 2, y)
+                max_prob = ddt[x << 2][y]
     return ret
-
-def get_best_characteristics(ddts: Tuple[List[List[int]]]) -> Tuple[int, int, int]:
-    # Find differentials in each sbox with high probabilities
-    print("Finding most likely XOR pair in each s-box...")
-    diffs = []
-    for i in range(8):
-        diffs.append(get_likely_diff(ddts[i]))
-    # Of canidates find highest one with greatest probability
-    '''
-    print("Selecting best XOR pair from canidates...")
-    idx = -1
-    max = -1
-    for i in range(8):
-        if ddts[i][canidates[i][0]][canidates[i][1]] > max:
-            idx = i
-            max = ddts[i][canidates[i][0]][canidates[i][1]]
-    print(f"Found best in sbox {idx} with probability {max}/64")
-    '''
-    return diffs
 
 def generate_plaintext_pairs(in_diff: int, n: int) -> List[Tuple[int, int]]:
     ret = []
@@ -93,7 +76,7 @@ def get_good_pairs(ct_pairs: List[Tuple[int, int]], expected_diff: int, box: int
             ret.append((ct1, ct2))
     return ret
 
-def partial_subkey_canidates(ct_pairs: List[Tuple[int, int]], expected_diff: int, box: int) -> List[int]:
+def get_partial_subkeys(ct_pairs: List[Tuple[int, int]], expected_diff: int, box: int) -> List[int]:
     votes = dict.fromkeys(range(2 ** 6), 0)
     for ct1, ct2 in ct_pairs:
         l1, _ = des.split_block(ct1)
@@ -103,26 +86,54 @@ def partial_subkey_canidates(ct_pairs: List[Tuple[int, int]], expected_diff: int
             votes[key_bits] += 1
     return [key for key in votes if votes[key] == max(votes.values())]
 
+oracle_calls = 0
+
+def encryption_oracle(pt: int, subkeys: List[int]) -> int:
+    global oracle_calls
+    oracle_calls += 1
+    return des.encode_block_rounds(pt, subkeys, encryption=True, rounds=1)
+
+
 if __name__ == "__main__":
-    # Generate the differential distribution table for each sbox
+    # Parse command line arguments for attack settings
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pairs', type=int, default=200)
+    args = parser.parse_args()
+    PAIRS_PER_SBOX = args.pairs
+    
+    # Generate ddts and find best characteristic for the attack
     print("Generating differential distribution tables...")
-    ddts = tuple(get_ddt(i) for i in range(8))
-    diffs = get_best_characteristics(ddts)
-    print(f"characteristics: {diffs}")
+    ddts = [get_ddt(i) for i in range(8)]
+    print("Searching tables for best characteristics...")
+    diffs = [get_best_characteristic(ddts[i]) for i in range(8)]
+    print(f"Found the following characteristics: [{', '.join(f'({diffs[i][0]:02x}, {diffs[i][1]:01x})' for i in range(8))}]")
+    print()
+
     # Choose a random key and generate subkeys
+    print("Choosing a random key and generating subkeys...")
     subkeys = list(des.subkeys((random.randbytes(8))))
-    print(f"1 round subkey: {subkeys[0]}")
-    print(f"subkey fragments: {[des.get_i6(subkeys[0], i) for i in range(8)]}")
-    # Generate plaintext pairs for attack
-    subkey = 0
-    for i in range(8):
-        pt_pairs = generate_plaintext_pairs(des.E(diffs[i][0] << 42 - i * 6, invert=True), 1000)
-        ct_pairs = []
-        for pt1, pt2 in pt_pairs:
-            ct1 = des.encode_block_rounds(pt1, subkeys, encryption=True, rounds=1)
-            ct2 = des.encode_block_rounds(pt2, subkeys, encryption=True, rounds=1)
-            ct_pairs.append((ct1, ct2))
-        ct_pairs = get_good_pairs(ct_pairs, diffs[i][1], i)
-        print(f"for subkey pos {i} with characteristic {diffs[i]} filtered to {len(ct_pairs)} good ct pairs")
-        canidates = partial_subkey_canidates(ct_pairs, diffs[i][1], i)
-        print(f"Canidate partial subkeys for position {i}: {canidates}")
+    print(f"First round subkey: {subkeys[0]:012x}")
+    print(f"Subkey fragments: {' '.join(f'{des.get_i6(subkeys[0], i):02x}' for i in range(8))}")
+    print()
+
+    # Generate ciphertext pairs to use for the attack
+    ct_pairs = []
+    print(f"Generating {PAIRS_PER_SBOX} plaintext pairs for each sbox...")
+    pt_pairs = [generate_plaintext_pairs(des.E(diffs[i][0] << 42 - i * 6, invert=True), PAIRS_PER_SBOX) for i in range(8)]
+    print(f"Passing to encryption oracle to get ciphertext pairs...")
+    ct_pairs = [[(encryption_oracle(pt1, subkeys), encryption_oracle(pt2, subkeys)) for pt1, pt2 in pt_pairs[i]] for i in range(8)]
+    print(f"Total calls to encryption oracle: {oracle_calls}")
+    print()
+
+    # Filter ciphertext pairs and recover partial subkeys
+    print(f"Filtering ciphertexts for only \"good pairs\"...")
+    ct_pairs = [get_good_pairs(ct_pairs[i], diffs[i][1], i) for i in range(8)]
+    print(f"Averaged {sum([len(ct_pairs[i]) for i in range(8)]) / 8:.02f}/{PAIRS_PER_SBOX} good ciphertexts for each sbox")
+    print()
+
+    # Calculate possible partial subkeys using good pairs
+    print(f"Using ciphertexts to recover partial subkeys...")
+    partial_subkeys = [get_partial_subkeys(ct_pairs[i], diffs[i][1], i) for i in range(8)]
+    print(f"Reduced total key space to {prod([len(k) for k in partial_subkeys])}")
+
+    # Brute force the remaining key space to recover full subkey
