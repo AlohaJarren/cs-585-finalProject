@@ -10,7 +10,7 @@
 """
 
 from tables import IP, E, P, S, subkeys
-from typing import Tuple
+from typing import Tuple, List
 
 def get_i6(block: int, i: int) -> int:
     """

@@ -1,8 +1,13 @@
 import des
 from typing import List, Tuple
 import random
-from math import prod
+import math
 import argparse
+import itertools
+
+#
+# Functions for generating DDT and characteristic
+#
 
 def get_ddt(box: int) -> List[List[int]]:
     ddt = [[0 for _ in range(16)] for _ in range(64)]
@@ -25,45 +30,16 @@ def get_best_characteristic(ddt: List[List[int]]) -> Tuple[int, int]:
                 max_prob = ddt[x << 2][y]
     return ret
 
+#
+# Functions for generating plaintext pairs and good ciphertexts
+#
+
 def generate_plaintext_pairs(in_diff: int, n: int) -> List[Tuple[int, int]]:
     ret = []
     for _ in range(n):
         pt = random.randrange(2 ** 64)
         ret.append((pt, pt ^ in_diff))
     return ret
-
-def get_probable_key(out_diff: int, in1: int, in2: int, box:int) -> List[int]:
-    """
-    Recover a 6-bit partial subkey candidate for one S-box characteristic.
-    """
-    candidates = []
-
-    for k in range(64):
-        y1 = des.S(in1 ^ k, box)
-        y2 = des.S(in2 ^ k, box)
-        if (y1 ^ y2) == out_diff:
-            candidates.append(k)
-    
-    return candidates
-
-def matrix_pretty_print(matrix):
-    # see https://stackoverflow.com/questions/13214809/pretty-print-2d-python-list
-    s = [[str(e) for e in row] for row in matrix]
-    lens = [max(map(len, col)) for col in zip(*s)]
-    fmt = '  '.join('{{:{}}}'.format(x) for x in lens)
-    table = [fmt.format(*row) for row in s]
-    print('\n'.join(table))
-
-def demo_one_round():
-    key = b"ABCDEFGH"
-    plaintext = 0x0123456789ABCDEF
-    subkeys = list(des.derive_keys(key))
-    k1 = subkeys[0]
-    print(f"Key bytes: {key!r}")
-    print(f"First-round subkey K1: 0x{k1:012X}")
-    c1 = des.encrypt_block_one_round(plaintext, key)
-    print(f"Plaintext      : 0x{plaintext:016X}")
-    print(f"1-round output : 0x{c1:016X}")
 
 def get_good_pairs(ct_pairs: List[Tuple[int, int]], expected_diff: int, box: int) -> List[Tuple[int, int]]:
     ret = []
@@ -76,6 +52,22 @@ def get_good_pairs(ct_pairs: List[Tuple[int, int]], expected_diff: int, box: int
             ret.append((ct1, ct2))
     return ret
 
+#
+# Functions for reducing key space to possible partial subkeys
+#
+
+def get_probable_key(out_diff: int, in1: int, in2: int, box:int) -> List[int]:
+    """
+    Recover a 6-bit partial subkey candidate for one S-box characteristic.
+    """
+    candidates = []
+    for k in range(64):
+        y1 = des.S(in1 ^ k, box)
+        y2 = des.S(in2 ^ k, box)
+        if (y1 ^ y2) == out_diff:
+            candidates.append(k)
+    return candidates
+
 def get_partial_subkeys(ct_pairs: List[Tuple[int, int]], expected_diff: int, box: int) -> List[int]:
     votes = dict.fromkeys(range(2 ** 6), 0)
     for ct1, ct2 in ct_pairs:
@@ -86,22 +78,36 @@ def get_partial_subkeys(ct_pairs: List[Tuple[int, int]], expected_diff: int, box
             votes[key_bits] += 1
     return [key for key in votes if votes[key] == max(votes.values())]
 
-oracle_calls = 0
+#
+# Functions for brute forcing the subkey from reduced key space
+#
 
-def encryption_oracle(pt: int, subkeys: List[int]) -> int:
-    global oracle_calls
-    oracle_calls += 1
+def validate_subkey(pts, cts, subkey):
+    for i in range(len(pts)):
+        if encrypt(pts[i], [subkey]) != cts[i]:
+            return False
+    return True
+    
+def brute_force_subkey(possible_keys: List[List[int]], known_pts, known_cts) -> int:
+    for canidate in possible_keys:
+        if validate_subkey(known_pts, known_cts, canidate):
+            return canidate
+    return None
+
+#
+# Encryption Oracle
+#
+
+encrypt_calls = 0
+
+def encrypt(pt: int, subkeys: List[int]) -> int:
+    global encrypt_calls
+    encrypt_calls += 1
     return des.encode_block_rounds(pt, subkeys, encryption=True, rounds=1)
 
-
-if __name__ == "__main__":
-    # Parse command line arguments for attack settings
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--pairs', type=int, default=200)
-    args = parser.parse_args()
-    PAIRS_PER_SBOX = args.pairs
-    
+def run_attack(num_pairs: int):
     # Generate ddts and find best characteristic for the attack
+    print()
     print("Generating differential distribution tables...")
     ddts = [get_ddt(i) for i in range(8)]
     print("Searching tables for best characteristics...")
@@ -118,22 +124,50 @@ if __name__ == "__main__":
 
     # Generate ciphertext pairs to use for the attack
     ct_pairs = []
-    print(f"Generating {PAIRS_PER_SBOX} plaintext pairs for each sbox...")
-    pt_pairs = [generate_plaintext_pairs(des.E(diffs[i][0] << 42 - i * 6, invert=True), PAIRS_PER_SBOX) for i in range(8)]
+    print(f"Generating {num_pairs} plaintext pairs for each sbox...")
+    pt_pairs = [generate_plaintext_pairs(des.E(diffs[i][0] << 42 - i * 6, invert=True), num_pairs) for i in range(8)]
     print(f"Passing to encryption oracle to get ciphertext pairs...")
-    ct_pairs = [[(encryption_oracle(pt1, subkeys), encryption_oracle(pt2, subkeys)) for pt1, pt2 in pt_pairs[i]] for i in range(8)]
-    print(f"Total calls to encryption oracle: {oracle_calls}")
+    ct_pairs = [[(encrypt(pt1, subkeys), encrypt(pt2, subkeys)) for pt1, pt2 in pt_pairs[i]] for i in range(8)]
     print()
 
     # Filter ciphertext pairs and recover partial subkeys
     print(f"Filtering ciphertexts for only \"good pairs\"...")
-    ct_pairs = [get_good_pairs(ct_pairs[i], diffs[i][1], i) for i in range(8)]
-    print(f"Averaged {sum([len(ct_pairs[i]) for i in range(8)]) / 8:.02f}/{PAIRS_PER_SBOX} good ciphertexts for each sbox")
+    good_ct_pairs = [get_good_pairs(ct_pairs[i], diffs[i][1], i) for i in range(8)]
+    print(f"Averaged {sum([len(good_ct_pairs[i]) for i in range(8)]) / 8:.02f}/{num_pairs} good ciphertexts for each sbox")
     print()
 
     # Calculate possible partial subkeys using good pairs
     print(f"Using ciphertexts to recover partial subkeys...")
-    partial_subkeys = [get_partial_subkeys(ct_pairs[i], diffs[i][1], i) for i in range(8)]
-    print(f"Reduced total key space to {prod([len(k) for k in partial_subkeys])}")
+    partial_subkeys = [get_partial_subkeys(good_ct_pairs[i], diffs[i][1], i) for i in range(8)]
+    print(f"Reduced total key space from 2^48 to 2^{math.log2(math.prod([len(k) for k in partial_subkeys])):0.1f}")
+    print()
 
     # Brute force the remaining key space to recover full subkey
+    print(f"Reconstructing all possible subkeys...")
+    possible_subkeys = []
+    for possible_subkey in list(itertools.product(*partial_subkeys)):
+        k = 0   
+        for v in possible_subkey:
+            k = k << 6 | v
+        possible_subkeys.append(k)
+    print(f"Brute forcing remaining possible subkeys with known plaintext ciphertext pairs...")
+    known_pt = [pt_pairs[0][i][0] for i in range(2)]
+    known_ct = [ct_pairs[0][i][0] for i in range(2)]
+    recovered_subkey = brute_force_subkey(possible_subkeys, known_pt, known_ct)
+    print(f"Recovered the subkey: {recovered_subkey:02x}")
+    print()
+
+    # Summary of attack
+    print(f"Subkey match? {recovered_subkey == subkeys[0]}")
+    print(f"Total encryptions made: {encrypt_calls}")
+    print()
+
+    return recovered_subkey == subkeys[0], encrypt_calls
+
+if __name__ == "__main__":
+    # Parse command line arguments for attack settings
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--pairs', type=int, default=200)
+    args = parser.parse_args()
+
+    run_attack(args.pairs)
