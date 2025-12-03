@@ -117,7 +117,7 @@ def encode_block_rounds(block: int, derived_keys, encryption: bool, rounds: int 
     #return IP(preoutput, invert=True)
     return join_block(left, right)
 
-def encrypt_block_one_round(block: int, key: bytes) -> int:
+def encrypt_one_round(block: int, subkeys: List[int]) -> int:
     """
     Convenience helper: encrypt a block using exactly one DES round.
 
@@ -125,5 +125,4 @@ def encrypt_block_one_round(block: int, key: bytes) -> int:
     encode_block_rounds with rounds=1. It is not meant for real security,
     but as a lab function for reduced-round experiments.
     """
-    subkeys = list(subkeys(key))
     return encode_block_rounds(block, subkeys, encryption=True, rounds=1)

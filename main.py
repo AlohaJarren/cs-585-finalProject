@@ -84,7 +84,7 @@ def get_partial_subkeys(ct_pairs: List[Tuple[int, int]], expected_diff: int, box
 
 def validate_subkey(pts, cts, subkey):
     for i in range(len(pts)):
-        if encrypt(pts[i], [subkey]) != cts[i]:
+        if des.encrypt_one_round(pts[i], [subkey]) != cts[i]:
             return False
     return True
     
@@ -95,21 +95,10 @@ def brute_force_subkey(possible_keys: List[List[int]], known_pts, known_cts) -> 
     return None
 
 #
-# Encryption Oracle
-#
-
-encrypt_calls = 0
-
-def encrypt(pt: int, subkeys: List[int]) -> int:
-    global encrypt_calls
-    encrypt_calls += 1
-    return des.encode_block_rounds(pt, subkeys, encryption=True, rounds=1)
-
-#
 # Run a demo attack demonstrating key recovery
 #
 
-def run_demo_attack(num_pairs: int, get_key: bool = True):
+def run_demo_attack(num_pairs: int):
     # Track the total number of encryptions made
     global encrypt_calls
     encrypt_calls = 0
@@ -135,7 +124,7 @@ def run_demo_attack(num_pairs: int, get_key: bool = True):
     print(f"Generating {num_pairs} plaintext pairs for each sbox...")
     pt_pairs = [generate_plaintext_pairs(des.E(diffs[i][0] << 42 - i * 6, invert=True), num_pairs) for i in range(8)]
     print(f"Passing to encryption oracle to get ciphertext pairs...")
-    ct_pairs = [[(encrypt(pt1, subkeys), encrypt(pt2, subkeys)) for pt1, pt2 in pt_pairs[i]] for i in range(8)]
+    ct_pairs = [[(des.encrypt_one_round(pt1, subkeys), des.encrypt_one_round(pt2, subkeys)) for pt1, pt2 in pt_pairs[i]] for i in range(8)]
     print()
 
     # Filter ciphertext pairs and recover partial subkeys
@@ -150,10 +139,6 @@ def run_demo_attack(num_pairs: int, get_key: bool = True):
     print(f"Reduced total key space from 2^48 to 2^{math.log2(math.prod([len(k) for k in partial_subkeys])):0.1f}")
     print()
 
-    # Terminate early to skip brute forcing subkey step
-    if not get_key:
-        return math.prod([len(k) for k in partial_subkeys])
-
     # Brute force the remaining key space to recover full subkey
     print(f"Reconstructing all possible subkeys...")
     possible_subkeys = []
@@ -167,14 +152,8 @@ def run_demo_attack(num_pairs: int, get_key: bool = True):
     known_cts = [ct_pairs[0][i][0] for i in range(5)]
     recovered_subkey = brute_force_subkey(possible_subkeys, known_pts, known_cts)
     print(f"Recovered the subkey: {recovered_subkey:02x}")
-    print()
-
-    # Summary of attack
     print(f"Subkey match? {recovered_subkey == subkeys[0]}")
-    print(f"Total encryptions made: {encrypt_calls}")
     print()
-
-    return recovered_subkey == subkeys[0], encrypt_calls
 
 #
 # Run code
