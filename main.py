@@ -183,7 +183,7 @@ def run_demo_attack(num_pairs: int, get_key: bool = True):
 if __name__ == "__main__":
     # Parse command line arguments for attack settings
     parser = argparse.ArgumentParser()
-    parser.add_argument('--pairs', type=int, default=200)
+    parser.add_argument('--pairs', type=int, default=100)
     args = parser.parse_args()
 
     # Run the demo attack
