@@ -105,7 +105,15 @@ def encrypt(pt: int, subkeys: List[int]) -> int:
     encrypt_calls += 1
     return des.encode_block_rounds(pt, subkeys, encryption=True, rounds=1)
 
-def run_attack(num_pairs: int):
+#
+# Run a demo attack demonstrating key recovery
+#
+
+def run_demo_attack(num_pairs: int, get_key: bool = True):
+    # Track the total number of encryptions made
+    global encrypt_calls
+    encrypt_calls = 0
+
     # Generate ddts and find best characteristic for the attack
     print()
     print("Generating differential distribution tables...")
@@ -142,6 +150,10 @@ def run_attack(num_pairs: int):
     print(f"Reduced total key space from 2^48 to 2^{math.log2(math.prod([len(k) for k in partial_subkeys])):0.1f}")
     print()
 
+    # Terminate early to skip brute forcing subkey step
+    if not get_key:
+        return math.prod([len(k) for k in partial_subkeys])
+
     # Brute force the remaining key space to recover full subkey
     print(f"Reconstructing all possible subkeys...")
     possible_subkeys = []
@@ -151,9 +163,9 @@ def run_attack(num_pairs: int):
             k = k << 6 | v
         possible_subkeys.append(k)
     print(f"Brute forcing remaining possible subkeys with known plaintext ciphertext pairs...")
-    known_pt = [pt_pairs[0][i][0] for i in range(2)]
-    known_ct = [ct_pairs[0][i][0] for i in range(2)]
-    recovered_subkey = brute_force_subkey(possible_subkeys, known_pt, known_ct)
+    known_pts = [pt_pairs[0][i][0] for i in range(5)]
+    known_cts = [ct_pairs[0][i][0] for i in range(5)]
+    recovered_subkey = brute_force_subkey(possible_subkeys, known_pts, known_cts)
     print(f"Recovered the subkey: {recovered_subkey:02x}")
     print()
 
@@ -164,10 +176,15 @@ def run_attack(num_pairs: int):
 
     return recovered_subkey == subkeys[0], encrypt_calls
 
+#
+# Run code
+#
+
 if __name__ == "__main__":
     # Parse command line arguments for attack settings
     parser = argparse.ArgumentParser()
     parser.add_argument('--pairs', type=int, default=200)
     args = parser.parse_args()
 
-    run_attack(args.pairs)
+    # Run the demo attack
+    run_demo_attack(args.pairs)
