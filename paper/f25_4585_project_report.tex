@@ -22,6 +22,7 @@
 \usepackage{suffix} % for *-version commands
 \usepackage{tikz} %
 \usepackage{xspace} %
+\usepackage{enumitem} % Added to handle notation section
 
 \frenchspacing
 
@@ -78,12 +79,20 @@
       \setlength{\labelsep}{2mm} %
       \setlength{\labelwidth}{8mm} %
       \setlength{\itemsep}{0mm}}}{\end{list}}
+
 %% End-Of-Header
 
 % --------------------------------------------------------------------------- %
 % Your customization:
 % --------------------------------------------------------------------------- %
 \def\course{[\textsc{Fall 2025 CS485/585}]}
+
+\newcommand{\notationdef}[2]{%
+  \par\noindent
+  \hangindent=2em
+  \hangafter=1
+  \textit{#1} #2\par\vspace{0.5em}
+}
 
 % --------------------------------------------------------------------------- %
 % Main document:
@@ -148,6 +157,32 @@ as follows: $\ldots$
 %------------------------------------------------------------------------------%
 This section provides preliminary materials, such as summarizing
 common notations, definitions, and useful facts for the main body.
+
+\subsection{Notation}
+We use the following notations in the discussion of our attack.
+
+\begin{description}[style=unboxed, leftmargin=2em, font=\itshape]
+    \item[Numbers:] To differentiate between hexadecimal, decimal, and binary number a subscript is used to denote the number's base. Decimal numbers are denoted with no subscript. (e.g., $31 =\text{1F}_{16} = 00011111_{2}$)
+    
+    \item[Plaintext and Ciphertext:] The plaintext is denoted by $M$, and the ciphertext is denoted by $C$. Because the initial permutation has little bearing on our attack model, $M$ represents the plaintext after the initial permutation, and $C$ represents the ciphertext before the final permutation.
+
+    \item[Feistel Rounds:] The state of the ciphertext after round is $i$ denoted by the pair $(L_i, R_i)$, where $L_i$ denotes the leftmost 32-bits and $R_i$ denotes the rightmost 32-bits. The pair $(L_0, R_0)$ is used to denote the input to the first round of the feistel network.
+
+    \item[Differences:] In differential cryptanalysis, variables are usually considered in pairs. Given a value $X$, its corresponding value in the pair is denoted by $X'$. The difference of $X$ and $X'$ is defined as $X \oplus X'$, and this value is denoted by $\Delta X$.
+
+    \item[Subkeys:] The subkeys is denoted by $K_i$, where $i$ indicates the round in which the subkey is used.
+
+    \item[Initial Permutation:] The initial permutation of DES is denoted by $IP(X)$, and the inverse initial permutation, or final permutation, is denoted by $IP^{-1}(X)$.
+    
+    \item[F Function:] The F function of DES is denoted by $F(X)$.
+    
+    \item[Expansion Function:] The expansion function is denoted by $E(X)$.
+
+    \item[P Permutation:] The P permutation is denoted by $P(X)$.
+
+    \item[S-boxes:] The eight S-boxes of DES are denoted by $S_1, S_2, \dots,S_8$. The 6-bit input to each S-box is denoted by $B_i$, where $i$ indicates its position. Similarly, the 4-bit output to each S-box is denoted by $O_i$.
+    
+\end{description}
 
 %------------------------------------------------------------------------------%
 \section{Main content}
