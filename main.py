@@ -79,8 +79,8 @@ def get_partial_subkeys(ct_pairs: List[Tuple[int, int]], expected_diff: int, box
 def validate_subkey(pts, cts, subkey):
     for i in range(len(pts)):
         if des.encrypt_one_round(pts[i], [subkey]) != cts[i]:
-            return False, i+1
-    return True, len(pts)
+            return False
+    return True
     
 def brute_force_subkey(possible_keys: List[List[int]], known_pts, known_cts) -> int:
     encrypts = 0
@@ -91,21 +91,15 @@ def brute_force_subkey(possible_keys: List[List[int]], known_pts, known_cts) -> 
             return canidate, encrypts
     return None, encrypts
 
-
-# Write to csv function for demo purposes
-def write_list_to_csv(filename, data, fmt=None):
-    with open(filename, mode='w', newline='', encoding='utf-8') as file:
-        writer = csv.writer(file, quoting=csv.QUOTE_NONE)
-        if fmt:
-            writer.writerows([[format(item, fmt) for item in row] for row in data])
-        else:
-            writer.writerows(data)
-
 #
 # Run a demo attack demonstrating key recovery
 #
 
 def run_demo_attack(num_pairs: int):
+    # Track the total number of encryptions made
+    global encrypt_calls
+    encrypt_calls = 0
+
     # Generate ddts and find best characteristic for the attack
     print()
     print("Generating differential distribution tables...")
@@ -128,6 +122,7 @@ def run_demo_attack(num_pairs: int):
     pt_pairs = [generate_plaintext_pairs(des.E(diffs[i][0] << 42 - i * 6, invert=True), num_pairs) for i in range(8)]
     print(f"Passing to encryption oracle to get ciphertext pairs...")
     ct_pairs = [[(des.encrypt_one_round(pt1, subkeys), des.encrypt_one_round(pt2, subkeys)) for pt1, pt2 in pt_pairs[i]] for i in range(8)]
+    print()
 
     # Filter ciphertext pairs and recover partial subkeys
     print(f"Filtering ciphertexts for only \"good pairs\"...")
@@ -144,8 +139,8 @@ def run_demo_attack(num_pairs: int):
     print(f"Reduced total key space from 2^48 to 2^{math.log2(math.prod([len(k) for k in partial_subkeys])):0.1f}")
     print()
 
-    # Reconstruct all possible subkeys from fragments
-    print(f"Brute forcing remaining possible subkeys with known plaintext ciphertext pairs...")
+    # Brute force the remaining key space to recover full subkey
+    print(f"Reconstructing all possible subkeys...")
     possible_subkeys = []
     for possible_subkey in list(itertools.product(*partial_subkeys)):
         k = 0   
@@ -156,15 +151,10 @@ def run_demo_attack(num_pairs: int):
     # Brute force the remaining key space to recover full subkey
     known_pts = [pt_pairs[0][i][0] for i in range(5)]
     known_cts = [ct_pairs[0][i][0] for i in range(5)]
-    recovered_subkey, encrypts = brute_force_subkey(possible_subkeys, known_pts, known_cts)
-    print(f"Recovered the subkey {recovered_subkey:02x} in {encrypts} encryptions")
-    print(f"Total encryptions done: {encrypts + num_pairs * 16}")
+    recovered_subkey = brute_force_subkey(possible_subkeys, known_pts, known_cts)
+    print(f"Recovered the subkey: {recovered_subkey:02x}")
+    print(f"Subkey match? {recovered_subkey == subkeys[0]}")
     print()
-
-    # Record interesting data to files
-    write_list_to_csv('plaintexts.csv', pt_pairs[0], fmt='016x')
-    write_list_to_csv('ciphertexts.csv', ct_pairs[0], fmt='016x')
-    write_list_to_csv('good_cts.csv', good_ct_pairs[0], fmt='016x')
 
 #
 # Run code
