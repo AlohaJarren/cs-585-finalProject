@@ -1,0 +1,218 @@
+\documentclass[11pt]{article}
+
+\pdfoutput=1
+
+% --------------------------------------------------------------------------- %
+% Packages:
+% --------------------------------------------------------------------------- %
+
+\usepackage{amsmath,amsthm,amssymb,mathtools} %
+\usepackage{authblk} %
+\usepackage[english]{babel} %
+\usepackage{cite} % references in numerical order
+\usepackage{color} %
+\usepackage{csquotes} %
+\usepackage{dsfont} %
+\usepackage[breaklinks]{hyperref} %
+\usepackage[hmargin=1in,vmargin=1in]{geometry} %
+\usepackage{graphicx} %
+\usepackage{hyphenat} %
+\usepackage{mathpazo} % charter, fourier, mathpazo, times
+\usepackage{mdframed} %
+\usepackage{suffix} % for *-version commands
+\usepackage{tikz} %
+\usepackage{xspace} %
+
+\frenchspacing
+
+\hypersetup{colorlinks=true, linkcolor=blue, citecolor=magenta}
+
+\usetikzlibrary{calc,positioning}
+
+\mdfdefinestyle{figstyle}{ %
+  linecolor=black!7, %
+  backgroundcolor=black!7, %
+  innertopmargin=10pt, %
+  innerleftmargin=25pt, %
+  innerrightmargin=25pt, %
+  innerbottommargin=10pt %
+}
+
+\definecolor{White}{rgb}{1,1,1} %
+\definecolor{Black}{rgb}{0,0,0} %
+\definecolor{LightGray}{rgb}{.8,.8,.8} %
+\colorlet{ChannelColor}{LightGray} %
+\colorlet{ChannelTextColor}{Black} %
+\colorlet{ReadoutColor}{White} %
+
+% --------------------------------------------------------------------------- %
+% Macros:
+% --------------------------------------------------------------------------- %
+
+\newtheorem{theorem}{Theorem} %
+\newtheorem{lemma}[theorem]{Lemma} %
+\newtheorem{proposition}[theorem]{Proposition} %
+\newtheorem{corollary}[theorem]{Corollary} %
+\theoremstyle{definition} %
+\newtheorem{definition}[theorem]{Definition} %
+\theoremstyle{remark} %
+\newtheorem{remark}{Remark} %
+
+\newcommand{\comment}[1]{\begin{quote}\sf
+    \textcolor{blue}{[#1]}\end{quote}} %
+
+\newcommand{\complex}{\mathbb{C}} %
+\newcommand{\real}{\mathbb{R}} %
+\renewcommand{\natural}{\mathbb{N}} %
+\renewcommand{\Re}{\operatorname{Re}} %
+\renewcommand{\Im}{\operatorname{Im}} %
+\newcommand{\secpar}{\kappa} %
+\newcommand{\secparam}{1^\secpar} %
+\newcommand{\poly}{\mathit{poly}} %
+\def\yes{\text{yes}} %
+\def\no{\text{no}} %
+
+\newenvironment{mylist}[1]{\begin{list}{}{ %
+      \setlength{\leftmargin}{#1} %
+      \setlength{\rightmargin}{0mm} %
+      \setlength{\labelsep}{2mm} %
+      \setlength{\labelwidth}{8mm} %
+      \setlength{\itemsep}{0mm}}}{\end{list}}
+%% End-Of-Header
+
+% --------------------------------------------------------------------------- %
+% Your customization:
+% --------------------------------------------------------------------------- %
+\def\course{[\textsc{Fall 2025 CS485/585}]}
+
+% --------------------------------------------------------------------------- %
+% Main document:
+% --------------------------------------------------------------------------- %
+
+\begin{document}
+
+\title{\course \\
+  \LARGE\bf {Project report: Differential Cryptanalysis against 1-Round DES}}
+
+\author[ ]{Jarren Calizo}
+\author[ ]{Benjamin Chong}
+\author[ ]{Wesley Grzemkowski}
+
+\affil[ ]{Department of Computer Science\protect\\
+  Portland State University\vspace{2mm}}
+\affil[ ]{\textit {\{calizo,chongben,wesleyg\}@pdx.edu}}
+
+\date{\today}
+
+\renewcommand\Affilfont{\normalsize\itshape}
+\renewcommand\Authfont{\large}
+\setlength{\affilsep}{6mm}
+\renewcommand\Authsep{\rule{10mm}{0mm}}
+\renewcommand\Authands{\rule{10mm}{0mm}}
+
+\maketitle
+\setcounter{page}{0}
+
+\thispagestyle{empty}
+
+\begin{abstract}
+
+  An executive summary of your report.
+
+
+  \vfill
+  Your report should be about 10 pages without counting this title
+  page or the references in the end. Give a comprehensive account but
+  concisely.
+\end{abstract}
+
+\newpage
+
+%------------------------------------------------------------------------------%
+\section{Introduction}
+\label{sec:intro}
+%------------------------------------------------------------------------------%
+
+The introduction is the most important part of a paper. A reader
+should walk away with a clear picture of what you've done, a timeline
+and transformative moments on this topic (which means references will
+be crucial e.g.,~\cite{GM84}), why they are interesting and important,
+what critical ideas there are, and what's next in this line of work.
+
+\subsubsection*{Organization} The remainder of the paper is organized
+as follows: $\ldots$
+
+%------------------------------------------------------------------------------%
+\section{Preliminaries}
+\label{sec:prelim}
+%------------------------------------------------------------------------------%
+This section provides preliminary materials, such as summarizing
+common notations, definitions, and useful facts for the main body.
+
+%------------------------------------------------------------------------------%
+\section{Main content}
+\label{sec:result}
+%------------------------------------------------------------------------------%
+
+Pick appropriate titles and subtitles according to the topic of your
+project.
+
+%------------------------------------------------------------------------------%
+\subsection{Result 1}
+\label{sec:result1}
+%------------------------------------------------------------------------------%
+
+%------------------------------------------------------------------------------%
+\subsection{Result 2}
+\label{sec:result2}
+%------------------------------------------------------------------------------%
+
+
+%------------------------------------------------------------------------------%
+\section{Something more}
+\label{sec:more}
+%------------------------------------------------------------------------------%
+
+
+%-----------------------------------------------------------------------------%
+\section{Conclusion}
+\label{sec:con}
+%-----------------------------------------------------------------------------%
+
+Some concluding remarks. No need to repeat the content of the
+report. Give some prospect on the topic of your choice. What are the
+important take-away messages? Any open questions? 
+
+%-----------------------------------------------------------------------------%
+\subsection*{Acknowledgments}
+%-----------------------------------------------------------------------------%
+
+Optional. 
+
+\newpage
+
+\appendix
+
+%------------------------------------------------------------------------------%
+\section{Some supplementary material}
+\label{sec:appendix}
+%------------------------------------------------------------------------------%
+
+Something you think is worth mentioning but not essential or digresses
+the flow of the main body, e.g., long proofs of some claims.  Use it
+scarcely. (Is it really worth including? Unless 100\% certain, the
+answer is most likely no.)
+
+% --------------------------------------------------------------------------- %
+% References
+% Check overleaf tutorial on managing refs with bibtex \url{https://www.overleaf.com/learn/latex/Bibliography_management_with_bibtex}
+% --------------------------------------------------------------------------- %
+\newpage
+\bibliographystyle{alpha}
+% \bibliographystyle{acm}
+
+\bibliography{project.bib}
+
+\end{document}
+
+% LocalWords:  transformative
