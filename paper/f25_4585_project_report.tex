@@ -232,6 +232,7 @@ For each of the rounds, the input is split into a right half $R$ and a left half
 
 The F function, also called the mangler function, is designed to produce a pseudorandom 32-bit output from a 32-bit input and 48-bit key. The input to $F$ is runthrough the expansion box $E$, producing a 48-bit string, which is then XOR-ed with the key. The output of the XOR is split into 8 6-bit strings. These strings become the input for the 8 S-boxes. Each S-box is a unique mapping of 6-bit strings to 4-bit strings. After the S-box layer, we combine the eight resulting 4-bit strings into a 32-bit string and use the P permutation to produce the 32-bit output of the F function.
 \includegraphics[width=2\linewidth]{images/des_f_function.png}
+\caption{DES F Function}
 
 
 %------------------------------------------------------------------------------%
