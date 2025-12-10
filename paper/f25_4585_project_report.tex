@@ -170,22 +170,28 @@ We use the following notations in the discussion of our attack.
 
     \item[Differences:] In differential cryptanalysis, variables are usually considered in pairs. Given a value $X$, its corresponding value in the pair is denoted by $X'$. The difference of $X$ and $X'$ is defined as $X \oplus X'$, and this value is denoted by $\Delta X$.
 
-    \item[Subkeys:] The subkeys is denoted by $K_i$, where $i$ indicates the round in which the subkey is used.
+    \item[Subkeys:] The subkeys is denoted by $K_i$, where $i$ indicates the round in which the subkey is used. The notation $K^j$ is used to denote the $j$-th 6-bit chunk of $K$.
 
     \item[Initial Permutation:] The initial permutation of DES is denoted by $IP(X)$, and the inverse initial permutation, or final permutation, is denoted by $IP^{-1}(X)$.
     
-    \item[F Function:] The F function of DES is denoted by $F(X)$.
+    \item[F Function:] The F function, or mangler function, is denoted by $F(X)$.
     
     \item[Expansion Function:] The expansion function is denoted by $E(X)$.
 
     \item[P Permutation:] The P permutation is denoted by $P(X)$.
 
-    \item[S-boxes:] The eight S-boxes of DES are denoted by $S_1, S_2, \dots,S_8$. The 6-bit input to each S-box is denoted by $B_i$, where $i$ indicates its position. Similarly, the 4-bit output to each S-box is denoted by $O_i$.
+    \item[S-boxes:] The collective 48-bit to 32-bit S-box layer is denoted by the function $S(X)$. The individual eight S-boxes are denoted by $S^1, S^2, \dots,S^8$.
+
+    \item[Intermediary Values:] The output of the expansion function is denoted by $B$. The input to the S-box layer is denoted by $I$. The output of the S-box layer is denoted by $O$. A superscript $j$ is used to denote the $j$-th 6-bit chunk, or 4-bit chunk.
     
 \end{description}
 
+\subsection{1-round DES}
+
+We chose to construct our attack against 1-round DES. It is important to first clarify that 1-Round DES is already a trivial algorithm to defeat. To show this, consider a single known plaintext-ciphertext pair $M =(L_0, R_0)$ and $C=(L_1, R_1)$. From this values, one can compute $B = E(R_0)$ and $O = P^{-1}(R_1 \oplus L_0)$.
+
 %------------------------------------------------------------------------------%
-\section{Main content}
+\section{The Attack}
 \label{sec:result}
 %------------------------------------------------------------------------------%
 
@@ -193,15 +199,36 @@ Pick appropriate titles and subtitles according to the topic of your
 project.
 
 %------------------------------------------------------------------------------%
-\subsection{Result 1}
+\subsection{Our Attack Model}
 \label{sec:result1}
 %------------------------------------------------------------------------------%
 
+The attack we have created is a chosen-plaintext attack against 1-Round DES. However it could also be adapted to be a known-plaintext attack. This attack is not intended to be an effective or practical attack on single-round DES, but rather demonstrates how DES may be susceptible to differential cryptanalysis using a simplified model.
+
+The goal of this attack is to generate a number ciphertext pairs where the following information is known: the difference in the plaintexts, the difference in the ciphertexts, and the input to the F function.
+
 %------------------------------------------------------------------------------%
-\subsection{Result 2}
+\subsection{Finding Characteristics}
 \label{sec:result2}
 %------------------------------------------------------------------------------%
 
+
+%------------------------------------------------------------------------------%
+\subsection{Generating Plaintext Ciphertext Pairs}
+\label{sec:result2}
+%------------------------------------------------------------------------------%
+
+
+%------------------------------------------------------------------------------%
+\subsection{Reducing Key Space}
+\label{sec:result2}
+%------------------------------------------------------------------------------%
+
+
+%------------------------------------------------------------------------------%
+\subsection{Brute-forcing Subkey}
+\label{sec:result2}
+%------------------------------------------------------------------------------%
 
 %------------------------------------------------------------------------------%
 \section{Something more}
