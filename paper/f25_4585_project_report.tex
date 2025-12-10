@@ -132,7 +132,7 @@
   \vfill
   Your report should be about 10 pages without counting this title
   page or the references in the end. Give a comprehensive account but
-  concisely.
+  concisely. 
 \end{abstract}
 
 \newpage
@@ -142,11 +142,11 @@
 \label{sec:intro}
 %------------------------------------------------------------------------------%
 
-The introduction is the most important part of a paper. A reader
-should walk away with a clear picture of what you've done, a timeline
-and transformative moments on this topic (which means references will
-be crucial e.g.,~\cite{GM84}), why they are interesting and important,
-what critical ideas there are, and what's next in this line of work.
+        DES is a 16-round encryption scheme that operates on a 64-bit message using a 56-bit key.
+    The full 16-round DES scheme has proven rather secure considering its limited key space. It has however fallen out of use since the relatively small key space makes the scheme vulnerable to brute-force attacks. From what we have found in our research, reducing the number of rounds DES uses makes it vulnerable to differential cryptanalysis attacks.
+    
+        In this report, we will show the attack we implemented to recover the key for a one-round 
+    DES scheme. We will also show how such an attack can be used to recover the key for DES with a higher round count with relative efficiency.
 
 \subsubsection*{Organization} The remainder of the paper is organized
 as follows: $\ldots$
