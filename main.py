@@ -4,7 +4,6 @@ import secrets
 import math
 import argparse
 import itertools
-import csv
 import random
 
 # Functions for generating DDT and characteristic
