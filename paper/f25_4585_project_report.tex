@@ -23,6 +23,7 @@
 \usepackage{tikz} %
 \usepackage{xspace} %
 \usepackage{enumitem} % Added to handle notation section
+\usepackage{wrapfig}
 
 \frenchspacing
 
@@ -205,6 +206,15 @@ for all keys. The left half of the output of this permutation becomes $C_0$ and 
 \subsection{Encryption Overview}
 %------------------------------------------------------------------------------%
 
+\begin{wrapfigure}{r}{0.4\textwidth}
+
+
+    \includegraphics[width=01\linewidth]{images/des_rounds.png}
+    \caption{4-Round DES}
+
+
+\end{wrapfigure}
+
 To encrypt a 64 bit message under DES, the message is first passed through a set initial permutation $IP$ that rearranges the bits. This permutation is the same for every encryption. The output of this permutation becomes the input to the first round. The output of that round becomes the input for the second round. This continues until the output of the sixteenth round, which is run through the inverse of $IP$. The output of that inverse permutation is the ciphertext.
 
 For each of the rounds, the input is split into a right half $R$ and a left half $L$ each a 32-bit string. Each round uses the function $F_K$ where $K$ is the subkey for that round. The left half of the rounds output is $F_K(R)\oplus L$ and the right half is simply $L$.
@@ -213,6 +223,9 @@ For each of the rounds, the input is split into a right half $R$ and a left half
 %------------------------------------------------------------------------------%
 
 The F function, also called the mangler function, is designed to produce a pseudorandom 32-bit output from a 32-bit input and 48-bit key. The input to $F$ is runthrough the expansion box $E$, producing a 48-bit string, which is then XOR-ed with the key. The output of the XOR is split into 8 6-bit strings. These strings become the input for the 8 S-boxes. Each S-box is a unique mapping of 6-bit strings to 4-bit strings. After the S-box layer, we combine the eight resulting 4-bit strings into a 32-bit string and use the P permutation to produce the 32-bit output of the F function.
+\includegraphics[width=2\linewidth]{images/des_f_function.png}
+\caption{DES F Function}
+
 
 %------------------------------------------------------------------------------%
 \subsection{Vulnerabilities}
@@ -253,11 +266,17 @@ The general algorithm is as follows:
     \item Generate a set of plaintext pairs $\mathcal{M}$ where $\Delta B = I^*$.
     \item Encrypt the all pairs in $\mathcal{M}$ to get a set of ciphertext pairs $\mathcal{C}$.
     \item Derive a new set $\mathcal{C}^*$ which only contains pairs in $\mathcal{C}$ where $\Delta O = O^*$.
-    \item For each $(C, C') \in \mathcal{C}^*$, compute all possible subkeys and add them to a set $\mathcal{K}^*$.
-    \item The subkey $K$ will be one of the subkeys $\mathcal{K}^*$ which occurs with the highest frequency.
+    \item For each $(C, C') \in \mathcal{C}^*$, compute all possible subkeys and count the number of times each subkey appears.
+    \item Let $\mathcal{K}^*$ be the set of all subkeys in $\mathcal{K}$ which occurs with the highest frequency.
 \end{enumerate}
 
-For our attack, it is desireable for our characteristic $(I^*, O^*)$ when given a uniformly random $I$, $S(I) \oplus S(I') = O^*$ with the highest possible probability. This is because it will increase the likelihood for any given pair $(C, C') \in \mathcal{C}$ that $\Delta O = O^*$. This will allow us to produce a $\mathcal{C}^*$ of sufficient size with a reduced number of encryptions.
+For our attack, it is desireable for our characteristic $(I^*, O^*)$ when given a uniformly random $I$, $S(I) \oplus S(I') = O^*$ with the highest possible probability. This is because it will increase the likelihood for any given pair $(C, C') \in \mathcal{C}$ that $\Delta O = O^*$. This will allow us to produce a $\mathcal{C}^*$ of sufficient size with a reduced number of encryptions. Simultaneously, it is also desireable for $\mathcal{C}^*$ to minimize the size of $\mathcal{K}^*$ by as much as possible.
+
+Generally speaking, if we choose $I^*$ such that it only affects a single S-box, i.e., for some S-box $s$,
+\[ I^{*(j)} = 00\,00\,00_2 \quad \forall j  \in \{1,\dots,8 \mid j \ne s\}, \]
+we increase the probability that $S(I) \oplus S(I \oplus I^*) = O^*$. However, this also results in 
+\[ O^{*(j)} = 00\,00\,00_2 \quad \forall j  \in \{1,\dots,8 \mid j \ne s\}, \]
+and when this is true it becomes all subkeys in $\mathcal{K}^{(j)} = \mathcal{K}^{*(j)}$
 
 %------------------------------------------------------------------------------%
 \subsection{Generating Plaintext Ciphertext Pairs}
