@@ -134,13 +134,10 @@
 
 \begin{abstract}
 
-  An executive summary of your report.
+  This report demonstrates our method of using differential cryptanalysis to recover the key of a 1-round DES encryption scheme. This report gives an overview of DES and differential cryptanalysis, and shows how the attack we implemented can be used to recover the key of DES that uses a higher number of rounds.
 
 
   \vfill
-  Your report should be about 10 pages without counting this title
-  page or the references in the end. Give a comprehensive account but
-  concisely. 
 \end{abstract}
 
 \newpage
@@ -156,8 +153,12 @@
         In this report, we will show the attack we implemented to recover the key for a one-round 
     DES scheme. We will also show how such an attack can be used to recover the key for DES with a higher round count with relative efficiency.
 
-\subsubsection*{Organization} The remainder of the paper is organized
-as follows: $\ldots$
+    The attack we have implemented is based on "Differential Cryptanalysis of DES-like Cryptosystem" by Eli Biham and Adi Shamir. In this article, Biham and Shamir give an overview of DES and its vulnerabilities, introduce differential crtyptanalysis, and show how it is possible to recover the key of reduced-round DES with relative efficiency.
+    
+
+\subsubsection*{Organization}
+
+We will first go over how the DES encryption scheme works after defining relevant terms. We will then go into how our attack on single-round DES was implemented, and how this attack can be applied other forms of DES and DES-like schemes.
 
 %------------------------------------------------------------------------------%
 \section{Preliminaries}
@@ -244,11 +245,7 @@ Since The expansion box and P permutation in the F function are predetermined, m
 %------------------------------------------------------------------------------%
 %------------------------------------------------------------------------------%
 \section{Attack Against 1-Round DES}
-\label{sec:result}
 %------------------------------------------------------------------------------%
-
-Pick appropriate titles and subtitles according to the topic of your
-project.
 
 %------------------------------------------------------------------------------%
 \subsection{The Attack Model}
@@ -265,7 +262,7 @@ Now, consider an $n$-round DES scheme with a plaintext-cipertext pair $M = (L_0,
 
 In our model, we consider the attack to be successful if it can output the first subkey $K_1$, with a high probability of correctness. In a complete DES scheme, this would be similar to recovering only the final subkey. We are justified in this approach because it is simple to derive bits in the actual key even from a single subkey.
 
-\subsubsection{General Attack}
+\subsubsection{Overview of Attack}
 
 The goal of our attack is to generate a number ciphertext pairs $(C, C')$ where $\Delta B$ and $\Delta Y$ are known to the adversary. Using such a ciphertext pair, an adversary can use $L_1$ to compute a subset of possible subkeys able to produce this result. Given a enough of these ciphertext pairs, an adversary can reduce the subkey space considerably, and it becomes possible to brute-force the exact subkey. The general algorithm is as follows:
 \begin{enumerate}
@@ -280,7 +277,7 @@ The goal of our attack is to generate a number ciphertext pairs $(C, C')$ where 
 After this algorithm has been completed, it will always be true that $K \in \mathbf{K}$. Supposing that $\mathbf{C}^*$ is of sufficient size and the characteristic $(B^*, Y^*)$ is chosen adequetly, $\mathbf{K}$ can be hypothetically as small as $2^8$ making it a trivial operation to brute force.
 
 %------------------------------------------------------------------------------%
-\subsection{Description of Attack}
+\subsection{Implementation}
 \label{sec:attack_desc}
 %------------------------------------------------------------------------------%
 
@@ -314,35 +311,44 @@ We selected the highest probability characteristic from these 48 to get the char
     \caption{Chosen Characteristics}
 \end{table}
 
-%------------------------------------------------------------------------------%
-\subsection{Generating Plaintext Ciphertext Pairs}
-\label{sec:result2}
-%------------------------------------------------------------------------------%
+\subsubsection{Generating Plaintext Ciphertext Pairs}
 
-Once we have chosen a characteristic, the next step is to generating our plaintext and ciphertext pairs. If we already have a desired $M^*$, we can easily generate our set $\mathbf{M}$
+Once we have chosen a characteristic, the next step is to generating our plaintext and ciphertext pairs. If we already have a desired $M^*$, we can easily generate our set $\mathbf{M}$ by simply choosing random plaintexts $M \gets \mathcal{M}$ and creating a pair $(M, M' = M \oplus M^*)$. The size of $\mathcal{M}$ is $2^{64}$ so the probability of collisions is relatively low. In our attack however, we target only a single S-box, making the effective size of $\mathcal{M}$ for our purposes only $2^6 = 64$, making collisions significantly more probable even if $|\mathbf{M}|$ is small. In our implementation, we still used a uniformly random sample to produce our $M$ values in $\mathbf{M}$. An alternative method would be to instead sample $R \gets \{0,1\}^6$ without replacement. This may be slightly more efficient in terms of encryptions required to generate a $\mathbf{C}^*$ of the same size.
 
-%------------------------------------------------------------------------------%
-\subsection{Reducing Key Space}
-\label{sec:result2}
-%------------------------------------------------------------------------------%
+To generate $\mathbf{M}$ and $\mathbf{C}^*$ method, we must first convert our S-box characteristic $(B^*, Y^*)$ into the form $(M^*, C^*)$. More precisely, we need $\Delta M = M^* \implies \Delta B = B^*$ and $\Delta C = C^* \implies \Delta Y = Y^*$ to be true. For $M^*$ which is also $(L_0^*, R_0^*)$, because we have chosen only $B^*$ such that $b^* = 0$ for all bits duplicated by the expansion function, we can calculated as $R_0^* = E^{-1}(B^*)$ and always receive a valid output. If we had not made this choice, it is possible that there does not exist an input $R_0^*$ such that $E(R_0^*) = B^*$. As for $L_0^*$, $\Delta L$ is mutually independent of $\Delta B$ and $\Delta Y$ and so $L_0^*$ can be any value we want.
 
+For $C^*$ which is also $(L_1^*, R_1^*)$, first consider that $L_0 = L_1$ in 1-round DES, and so $L_0^* = L_1^*$. Next note that $R_1 = P(Y) \oplus L_0$ and so $\Delta R_1 = \Delta P(Y) \oplus \Delta L_0$. If we choose $L_0^* = 0$, then $\Delta L_0 = 0$ and $\Delta R_1 = \Delta P(Y)$. From this, we can compute $R_0^* = P(Y^*)$ so long as $L_0^* = 0$ and $L_1^* = 0$. This finally gives us the charactersitic $M^*, C^* = (0, E^{-1}[B^*]), (0, P[Y^*])$.
 
-%------------------------------------------------------------------------------%
-\section{Translating to Multi-Round DES}
-\label{sec:more}
-%------------------------------------------------------------------------------%
+\subsubsection{Reducing Key Space}
+
+Finally, to complete our attack we compute the possible subkeys for a given $(C, C') \in \mathbf{C}^*$. We know $\Delta Y = Y^*$, and can also compute $I = E(L_0)$ and $I' = E(L_0')$. Let us also only consider the S-box we are currently targeting $j$. This would give us the following equation.
+
+\[ Y^{*(j)} = S^j(I^{(j)} \oplus K^{(j)}) \oplus S^j(I'^{(j)} \oplus K^{(j)}) \]
+
+We can now calculate $\Delta S^j(I^{(j)} \oplus K^{(j)})$ for all possible values of $K^{(j)}$, and if the canidate subkey chunk produces $Y^{*(j)}$ we increment its counter. This will inevitably increment multiple subkeys, however we have found that given enough pairs in $\mathbf{C}^*$ only a small subset of these subkeys will be present in all trials.
 
 %------------------------------------------------------------------------------%
-\section{Something more}
-\label{sec:more}
+\subsection{Results}
+\label{sec:results}
 %------------------------------------------------------------------------------%
 
+Experimentally, when using our chosen canidates we have found that the size of $\mathbf{K}$ ceases to drop in size after approximately 20 ciphertext pairs have been processed. This takes approximately 100 initial plaintext pairs, making a total of 1600 encryptions across all 8 S-boxes. 
 
+\begin{figure}
+    \centering
+    \includegraphics[width=0.6\linewidth]{images/key_reduce.png}
+    \caption{Key Space Reduction v. Number of Plaintext Pairs}
+\end{figure}
+
+This attack does not suffer any probability of failure, i.e., the true subkey $K$ is not in $\mathbf{K}$, however the reduction in key space does have significant variance between trials. Using the canidates we selected, we found that the possible 6-bit subkey fragments was ceased shrinking at only 2 canidates for all S-box positions except $S^2$ and $S^4$ which produced $4$ canidates each. This creates a total keyspace of only $2^{10}$ which is trivial to brute force on a laptop on the order of milliseconds.
+
+%------------------------------------------------------------------------------%
+\section{Discussion}
+\label{sec:disc}
 %-----------------------------------------------------------------------------%
 \section{Conclusion}
 \label{sec:con}
 %-----------------------------------------------------------------------------%
-
 
 This project implemented and experimentally evaluated a differential cryptanalysis attack on a one-round instance of DES, with the goal of recovering the last-round subkey from chosen plaintext-ciphertext pairs. By constructing S-box difference distribution tables, generating structured plaintext pairs with fixed input differences, and aggregating votes over candidate subkeys, the attack consistently reduced the 48-bit last-round key space from $2^{48}$ possibilities down to roughly $2^{10}$-$2^{12}$ candidates, after which a small brute-force search recovered the correct subkey. Although 1-round DES is algebraically trivial to invert given a single known plaintext-ciphertext pair, treating it as a target for differential cryptanalysis provided a concrete, code-level view of how biased differentials arise and how they can be exploited.
 
