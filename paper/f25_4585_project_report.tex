@@ -153,7 +153,7 @@
         In this report, we will show the attack we implemented to recover the key for a one-round 
     DES scheme. We will also show how such an attack can be used to recover the key for DES with a higher round count with relative efficiency.
 
-    The attack we have implemented is based on "Differential Cryptanalysis of DES-like Cryptosystem" by Eli Biham and Adi Shamir. In this article, Biham and Shamir give an overview of DES and its vulnerabilities, introduce differential crtyptanalysis, and show how it is possible to recover the key of reduced-round DES with relative efficiency.
+    The attack we have implemented is based on ``Differential Cryptanalysis of DES-like Cryptosystem'' by Eli Biham and Adi Shamir~\cite{10.5555/646755.705229}. In this article, Biham and Shamir give an overview of DES and its vulnerabilities, introduce differential crtyptanalysis, and show how it is possible to recover the key of reduced-round DES with relative efficiency.
     
 
 \subsubsection*{Organization}
@@ -332,10 +332,11 @@ We can now calculate $\Delta S^j(I^{(j)} \oplus K^{(j)})$ for all possible value
 \label{sec:results}
 %------------------------------------------------------------------------------%
 
-Experimentally, when using our chosen canidates we have found that the size of $\mathbf{K}$ ceases to drop in size after approximately 20 ciphertext pairs have been processed. This takes approximately 100 initial plaintext pairs, making a total of 1600 encryptions across all 8 S-boxes. 
+Experimentally, when using our chosen canidates we have found that the size of $\mathbf{K}$ ceases to drop in size after approximately 20 ciphertext pairs have been processed. This takes approximately 100 initial plaintext pairs (see Figure \ref{fig:key_red}), making a total of 1600 encryptions across all 8 S-boxes.
 
 \begin{figure}
     \centering
+    \label{fig:key_red}
     \includegraphics[width=0.6\linewidth]{images/key_reduce.png}
     \caption{Key Space Reduction v. Number of Plaintext Pairs}
 \end{figure}
@@ -345,6 +346,13 @@ This attack does not suffer any probability of failure, i.e., the true subkey $K
 %------------------------------------------------------------------------------%
 \section{Discussion}
 \label{sec:disc}
+%-----------------------------------------------------------------------------%
+
+%------------------------------------------------------------------------------%
+\subsection{Impact and Limitations}
+\label{sec:impact}
+%------------------------------------------------------------------------------%
+
 %-----------------------------------------------------------------------------%
 \section{Conclusion}
 \label{sec:con}
@@ -359,24 +367,13 @@ At the same time, the limitations of our model are significant. We attack only t
 Nevertheless, the exercise is valuable. Implementing DES, building DDTs, and debugging the attack sharpened our understanding of how S-boxes, permutations, and key mixing interact under differential analysis. The fact that meaningful key-space reductions are achievable even in this simple setting reinforces why block cipher designers must select S-boxes and round counts with respect to differential and linear criteria, not just intuition. Future work could extend this framework to multiple rounds, compare DES's S-boxes against randomly generated alternatives, or replicate the experiment on modern lightweight ciphers to contrast their resistance profiles with DES.
 
 %-----------------------------------------------------------------------------%
-\subsection*{Acknowledgments}
+\section{Acknowledgements}
+\label{sec:ack}
 %-----------------------------------------------------------------------------%
 
-Optional. 
+The vast majority of the research done for this project came from the book ``Differential Cryptanalysis of the Data Encryption Standard'' by Biham and Shamir~\cite{10.5555/151116}. This book was published after their original article~\cite{10.5555/646755.705229} and goes into greater detail in a more digestible manner. Essentially, the entirety of the theoretical work can be attributed to these works.
 
-\newpage
-
-\appendix
-
-%------------------------------------------------------------------------------%
-\section{Some supplementary material}
-\label{sec:appendix}
-%------------------------------------------------------------------------------%
-
-Something you think is worth mentioning but not essential or digresses
-the flow of the main body, e.g., long proofs of some claims.  Use it
-scarcely. (Is it really worth including? Unless 100\% certain, the
-answer is most likely no.)
+Another source we relied upon heavily was the paper ``A Tutorial on Linear and Differential Cryptanalysis'' by Howard M. Heys. \cite{Heys01072002} This paper explains the mechanisms of differential cryptanalysis, and was important to helping us learn how it operates conceptually. This provided us with a more practical implementation of differential cryptanalysis, albeit on a simpler non-DES encryption scheme.
 
 % --------------------------------------------------------------------------- %
 % References
