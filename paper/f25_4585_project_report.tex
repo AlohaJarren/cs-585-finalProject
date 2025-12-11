@@ -202,6 +202,13 @@ We use the following notations in the discussion of our attack.
 \section{DES Overview}
 %------------------------------------------------------------------------------%
 
+\begin{wrapfigure}{R}{0.5\textwidth}
+    \centering
+    \includegraphics[trim={0cm, 0.35cm, 0.6cm, 0.7cm}, clip, width=\linewidth]{images/des_rounds.png}
+    \caption{4-Round DES}
+    \vspace{-1cm}
+\end{wrapfigure}
+
 %------------------------------------------------------------------------------%
 \subsection{Key Generation}
 %------------------------------------------------------------------------------%
@@ -210,18 +217,10 @@ We use the following notations in the discussion of our attack.
 inputting a single 64-bit key into the key generation algorithm. Note that the true keyspace of DES is 56 bits. When a 64-bit key is given as input, the 8th bit of each byte is not used.
     The 56 bits that are used are then passed through a permutation. This permutation is the same
 for all keys. The left half of the output of this permutation becomes $C_0$ and the right half becomes $D_0$. We then use a series of left shifts on $C_0$ and $D_0$ to obtain $C_n$ and $D_n$ for $1<=n<=16$. for $n = 1, 2, 9, 16$ $C_n$ and $D_n$ are a single left shift from $C_{n-1}$ and $D_{n-1}$, and for the other values of n, two left shifts are used. We then have sixteen 56-bit strings $C_nD_n$ for $1<=n<=16$. To obtain our 48-bit subkeys $K_n$ we apply a permutation to 48 bits of the corresponding $C_nD_n$. For reduced round DES of n rounds, we can just use the first n keys.
+
 %------------------------------------------------------------------------------%
 \subsection{Encryption Overview}
 %------------------------------------------------------------------------------%
-
-\begin{wrapfigure}{r}{0.4\textwidth}
-
-
-    \includegraphics[width=01\linewidth]{images/des_rounds.png}
-    \caption{4-Round DES}
-
-
-\end{wrapfigure}
 
 To encrypt a 64 bit message under DES, the message is first passed through a set initial permutation $IP$ that rearranges the bits. This permutation is the same for every encryption. The output of this permutation becomes the input to the first round. The output of that round becomes the input for the second round. This continues until the output of the sixteenth round, which is run through the inverse of $IP$. The output of that inverse permutation is the ciphertext.
 
@@ -231,9 +230,12 @@ For each of the rounds, the input is split into a right half $R$ and a left half
 %------------------------------------------------------------------------------%
 
 The F function, also called the mangler function, is designed to produce a pseudorandom 32-bit output from a 32-bit input and 48-bit key. The input to $F$ is runthrough the expansion box $E$, producing a 48-bit string, which is then XOR-ed with the key. The output of the XOR is split into 8 6-bit strings. These strings become the input for the 8 S-boxes. Each S-box is a unique mapping of 6-bit strings to 4-bit strings. After the S-box layer, we combine the eight resulting 4-bit strings into a 32-bit string and use the P permutation to produce the 32-bit output of the F function.
-\includegraphics[width=2\linewidth]{images/des_f_function.png}
-\caption{DES F Function}
 
+\begin{figure}
+\centering
+\includegraphics[width=1\linewidth]{images/des_f_function.png}
+\caption{DES F Function}
+\end{figure}
 
 %------------------------------------------------------------------------------%
 \subsection{Vulnerabilities}
