@@ -158,7 +158,7 @@
 
 \subsubsection*{Organization}
 
-We will first go over how the DES encryption scheme works after defining relevant terms. We will then go into how our attack on single-round DES was implemented, and how this attack can be applied other forms of DES and DES-like schemes.
+We will first go over how the DES encryption scheme works after defining relevant terms. We will then go into how our attack on single-round DES was implemented, and how this attack can be applied to other forms of DES and DES-like schemes.
 
 %------------------------------------------------------------------------------%
 \section{Preliminaries}
@@ -171,15 +171,15 @@ common notations, definitions, and useful facts for the main body.
 We use the following notations in the discussion of our attack.
 
 \begin{description}[style=unboxed, leftmargin=2em, font=\itshape]
-    \item[Numbers:] To differentiate between hexadecimal, decimal, and binary number a subscript is used to denote the number's base. Decimal numbers are denoted with no subscript. (e.g., $31 =\text{1F}_{16} = 00011111_{2}$)
+    \item[Numbers:] To differentiate between hexadecimal, decimal, and binary numbers a subscript is used to denote the number's base. Decimal numbers are denoted with no subscript. (e.g., $31 =\text{1F}_{16} = 00011111_{2}$)
     
     \item[Plaintext and Ciphertext:] The plaintext is denoted by $M$, and the ciphertext is denoted by $C$. Because the initial permutation has little bearing on our attack model, $M$ represents the plaintext after the initial permutation, and $C$ represents the ciphertext before the final permutation.
 
-    \item[Feistel Rounds:] The state of the ciphertext after round is $i$ denoted by the pair $(L_i, R_i)$, where $L_i$ denotes the leftmost 32-bits and $R_i$ denotes the rightmost 32-bits. The pair $(L_0, R_0)$ is used to denote the input to the first round of the feistel network.
+    \item[Feistel Rounds:] The state of the ciphertext after round $i$ is denoted by the pair $(L_i, R_i)$, where $L_i$ denotes the leftmost 32-bits and $R_i$ denotes the rightmost 32-bits. The pair $(L_0, R_0)$ is used to denote the input to the first round of the feistel network.
     
     \item[Differences:] In differential cryptanalysis, variables are usually considered in pairs. Given a value $X$, its corresponding value in the pair is denoted by $X'$. The difference of $X$ and $X'$ is defined as $X \oplus X'$, and this value is denoted by $\Delta X$.
 
-    \item[Subkeys:] The subkeys is denoted by $K_i$, where $i$ indicates the round in which the subkey is used. The notation $K^{(j)}$ is used to denote the $j$-th 6-bit chunk of $K$.
+    \item[Subkeys:] The subkeys are denoted by $K_i$, where $i$ indicates the round in which the subkey is used. The notation $K^{(j)}$ is used to denote the $j$-th 6-bit chunk of $K$.
 
     \item[Sets:] The set of all possible plaintexts is denoted by $\mathcal{M}$. The set of all possible ciphertexts is denoted by $\mathcal{C}$. The set of all possible subkeys is denoted by $\mathcal{K}$.
 
@@ -217,13 +217,13 @@ We use the following notations in the discussion of our attack.
     Each of the 16 rounds of DES uses its own 48-bit subkey. Each of these subkeys are obtained by 
 inputting a single 64-bit key into the key generation algorithm. Note that the true key space of DES is 56 bits. When a 64-bit key is given as input, the 8th bit of each byte is not used.
     The 56 bits that are used are then passed through a permutation. This permutation is the same
-for all keys. The left half of the output of this permutation becomes $C_0$ and the right half becomes $D_0$. We then use a series of left shifts on $C_0$ and $D_0$ to obtain $C_n$ and $D_n$ for $1<=n<=16$. for $n = 1, 2, 9, 16$ $C_n$ and $D_n$ are a single left shift from $C_{n-1}$ and $D_{n-1}$, and for the other values of n, two left shifts are used. We then have sixteen 56-bit strings $C_nD_n$ for $1<=n<=16$. To obtain our 48-bit subkeys $K_n$ we apply a permutation to 48 bits of the corresponding $C_nD_n$. For reduced round DES of n rounds, we can just use the first n keys.
+for all keys. The left half of the output of this permutation becomes $C_0$ and the right half becomes $D_0$. We then use a series of left shifts on $C_0$ and $D_0$ to obtain $C_n$ and $D_n$ for $1 \le n \le 16$. for $n = 1, 2, 9, 16$ $C_n$ and $D_n$ are a single left shift from $C_{n-1}$ and $D_{n-1}$, and for the other values of n, two left shifts are used. We then have sixteen 56-bit strings $C_nD_n$ for $1\le n\le16$. To obtain our 48-bit subkeys $K_n$ we apply a permutation to 48 bits of the corresponding $C_nD_n$. For reduced round DES of n rounds, we can just use the first n keys.
 
 %------------------------------------------------------------------------------%
 \subsection{Encryption Overview}
 %------------------------------------------------------------------------------%
 
-To encrypt a 64 bit message under DES, the message is first passed through a set initial permutation $IP$ that rearranges the bits. This permutation is the same for every encryption. The output of this permutation becomes the input to the first round. The output of that round becomes the input for the second round. This continues until the output of the sixteenth round, which is run through the inverse of $IP$. The output of that inverse permutation is the ciphertext.
+To encrypt a 64 bit message under DES, the message is first passed through a fixed initial permutation $IP$ that rearranges the bits. This permutation is the same for every encryption. The output of this permutation becomes the input to the first round. The output of that round becomes the input for the second round. This continues until the output of the sixteenth round, which is run through the inverse of $IP$. The output of that inverse permutation is the ciphertext.
 
 For each of the rounds, the input is split into a right half $R$ and a left half $L$ each a 32-bit string. Each round uses the function $F_K$ where $K$ is the subkey for that round. The left half of the rounds output is $F_K(R)\oplus L$ and the right half is simply $L$.
 %------------------------------------------------------------------------------%
@@ -241,7 +241,7 @@ The F function, also called the mangler function, is designed to produce a pseud
 %------------------------------------------------------------------------------%
 \subsection{Vulnerabilities}
 %------------------------------------------------------------------------------%
-Since The expansion box and P permutation in the F function are predetermined, much of the strength of this scheme relies on the S boxes. For our attack we focus on the XORs of pairs of messages, and the corresponding XORs of the pairs of ciphertexts. The problem with the S boxes is that for a given input XOR, some output XORs are more likely to coour than others. We can use this to narrow down the possible keys by choosing certain plaintext pairs with certain XORs.
+Since the expansion box and P permutation in the F function are predetermined, much of the strength of this scheme relies on the S boxes. For our attack we focus on the XORs of pairs of messages, and the corresponding XORs of the pairs of ciphertexts. The problem with the S boxes is that for a given input XOR, some output XORs are more likely to occur than others. We can use this to narrow down the possible keys by choosing certain plaintext pairs with certain XORs.
 %------------------------------------------------------------------------------%
 %------------------------------------------------------------------------------%
 \section{Attack Against 1-Round DES}
@@ -264,11 +264,11 @@ In our model, we consider the attack to be successful if it can output the first
 
 \subsubsection{Overview of Attack}
 
-The goal of our attack is to generate a number ciphertext pairs $(C, C')$ where $\Delta B$ and $\Delta Y$ are known to the adversary. Using such a ciphertext pair, an adversary can use $L_1$ to compute a subset of possible subkeys able to produce this result. Given a enough of these ciphertext pairs, an adversary can reduce the subkey space considerably, and it becomes possible to brute-force the exact subkey. The general algorithm is as follows:
+The goal of our attack is to generate a number ciphertext pairs $(C, C')$ where $\Delta B$ and $\Delta Y$ are known to the adversary. Using such a ciphertext pair, an adversary can use $L_1$ to compute a subset of possible subkeys able to produce this result. Given enough of these ciphertext pairs, an adversary can reduce the subkey space considerably, and it becomes possible to brute-force the exact subkey. The general algorithm is as follows:
 \begin{enumerate}
     \item Select a characteristic $(B^*, Y^*)$ which occurs with high probability in $S$.
     \item Generate a set of plaintext pairs $\mathbf{M}$ where $\Delta I = B^*$.
-    \item Encrypt the all pairs in $\mathbf{M}$ to get a set of ciphertext pairs $\mathbf{C}$.
+    \item Encrypt all pairs in $\mathbf{M}$ to get a set of ciphertext pairs $\mathbf{C}$.
     \item Derive a new set $\mathbf{C}^*$ which only contains pairs in $\mathbf{C}$ where $\Delta Y = Y^*$.
     \item For each $(C, C') \in \mathbf{C}^*$, compute all possible subkeys and count the number of times each subkey appears.
     \item Let $\mathbf{K}$ be the set of all subkeys in $\mathcal{K}$ which occurs with the highest frequency.
@@ -313,7 +313,7 @@ We selected the highest probability characteristic from these 48 to get the char
 
 \subsubsection{Generating Plaintext Ciphertext Pairs}
 
-Once we have chosen a characteristic, the next step is to generating our plaintext and ciphertext pairs. If we already have a desired $M^*$, we can easily generate our set $\mathbf{M}$ by simply choosing random plaintexts $M \gets \mathcal{M}$ and creating a pair $(M, M' = M \oplus M^*)$. The size of $\mathcal{M}$ is $2^{64}$ so the probability of collisions is relatively low. In our attack however, we target only a single S-box, making the effective size of $\mathcal{M}$ for our purposes only $2^6 = 64$, making collisions significantly more probable even if $|\mathbf{M}|$ is small. In our implementation, we still used a uniformly random sample to produce our $M$ values in $\mathbf{M}$. An alternative method would be to instead sample $R \gets \{0,1\}^6$ without replacement. This may be slightly more efficient in terms of encryptions required to generate a $\mathbf{C}^*$ of the same size.
+Once we have chosen a characteristic, the next step is to generate our plaintext and ciphertext pairs. If we already have a desired $M^*$, we can easily generate our set $\mathbf{M}$ by simply choosing random plaintexts $M \gets \mathcal{M}$ and creating a pair $(M, M' = M \oplus M^*)$. The size of $\mathcal{M}$ is $2^{64}$ so the probability of collisions is relatively low. In our attack however, we target only a single S-box, making the effective size of $\mathcal{M}$ for our purposes only $2^6 = 64$, making collisions significantly more probable even if $|\mathbf{M}|$ is small. In our implementation, we still used a uniformly random sample to produce our $M$ values in $\mathbf{M}$. An alternative method would be to instead sample $R \gets \{0,1\}^6$ without replacement. This may be slightly more efficient in terms of encryptions required to generate a $\mathbf{C}^*$ of the same size.
 
 To generate $\mathbf{M}$ and $\mathbf{C}^*$ method, we must first convert our S-box characteristic $(B^*, Y^*)$ into the form $(M^*, C^*)$. More precisely, we need $\Delta M = M^* \implies \Delta B = B^*$ and $\Delta C = C^* \implies \Delta Y = Y^*$ to be true. For $M^*$ which is also $L_0^* \mathrel{\|} R_0^*$, because we have chosen only $B^*$ such that $b^* = 0$ for all bits duplicated by the expansion function, we can calculated as $R_0^* = E^{-1}(B^*)$ and always receive a valid output. If we had not made this choice, it is possible that there does not exist an input $R_0^*$ such that $E(R_0^*) = B^*$. As for $L_0^*$, $\Delta L$ is mutually independent of $\Delta B$ and $\Delta Y$ and so $L_0^*$ can be any value we want.
 
@@ -364,7 +364,7 @@ This brings an interesting component to our attack, in that the filtering step t
 \label{sec:future}
 %------------------------------------------------------------------------------%
 
-There a few major limitations to the attack we have presented. The most important of which is the naive selection of characteristics. This attack method is almost entirely dependent on the quality of the chosen characteristic $(B^*, Y^*)$. This is mostly because our search method only considers 3 viable input XOR values for each S-box. It is possible that a characteristic with a lower differential probability could still provide a more efficient attack by revealing subkey bits from multiple S-boxes at a time.
+There are a few major limitations to the attack we have presented. The most important of which is the naive selection of characteristics. This attack method is almost entirely dependent on the quality of the chosen characteristic $(B^*, Y^*)$. This is mostly because our search method only considers 3 viable input XOR values for each S-box. It is possible that a characteristic with a lower differential probability could still provide a more efficient attack by revealing subkey bits from multiple S-boxes at a time.
 
 Another potential improvement on our attack would minimize the presence of key ties in our key reduction step. This would improve the fidelity of the key reduction step and lower the key space reduction further. This could be done by searching characteristics with lower probabilities of occurrence, or by using multiple characteristics and finding the overlap between their possible subkeys. Either would increase the number of encryptions needed to perform the attack, but reduce the time to brute force the remaining key space. This is our recommendation for future work, because the number of encryptions required to accomplish this attack is already sufficiently small.
 
@@ -377,7 +377,7 @@ This project implemented and experimentally evaluated a differential cryptanalys
 
 Our findings align qualitatively with the classical literature. Biham and Shamir's original work showed that full 16-round DES admits differential characteristics with non-negligible bias, but exploiting them requires about $2^{47}$ chosen plaintexts and substantial time, pushing such attacks beyond realistic deployment scenarios even though they are asymptotically faster than exhaustive key search. Matsui's linear cryptanalysis paints a similar picture from a different angle: linear approximations can be used to recover DES keys with around $2^{43}$-$2^{47}$ known plaintexts, again demonstrating structural weaknesses that are mostly of academic interest. Our 1-round experiments can be viewed as a scaled-down analogue of these results, where the same differential machinery becomes visible with far fewer pairs and the implementation details remain tractable for our cryptography class's final project.
 
-At the same time, the limitations of our model are significant. We attack only the final round, not the full 16-round cipher; we assume ideal chosen-plaintext access to the encryption oracle; and we do not attempt to propagate differentials across multiple rounds or invert the full key schedule to recover the 56-bit master key. In practice, modern attackers would simply brute force single-DES or target Triple DES and legacy protocols, while contemporary standards have moved to AES and other ciphers with larger keys and stronger security margins. Our contribution is therefore best understood as a educational case study rather than a new break.
+At the same time, the limitations of our model are significant. We attack only the final round, not the full 16-round cipher; we assume ideal chosen-plaintext access to the encryption oracle; and we do not attempt to propagate differentials across multiple rounds or invert the full key schedule to recover the 56-bit master key. In practice, modern attackers would simply brute force single-DES or target Triple DES and legacy protocols, while contemporary standards have moved to AES and other ciphers with larger keys and stronger security margins. Our contribution is therefore best understood as an educational case study rather than a new break.
 
 Nevertheless, the exercise is valuable. Implementing DES, building DDTs, and debugging the attack sharpened our understanding of how S-boxes, permutations, and key mixing interact under differential analysis. The fact that meaningful key-space reductions are achievable even in this simple setting reinforces why block cipher designers must select S-boxes and round counts with respect to differential and linear criteria, not just intuition. Future work could extend this framework to multiple rounds, compare DES's S-boxes against randomly generated alternatives, or replicate the experiment on modern lightweight ciphers to contrast their resistance profiles with DES.
 
